@@ -33,7 +33,7 @@ export const PlanCard = ({ plan }: { plan: Plan }) => {
 			</CardDescription>
 
           </div>
-          <div className="px-3 py-1 rounded-full text-xs font-medium bg-[#5ba88e] text-white">
+          <div className="px-3 py-1 rounded-full text-xs font-medium bg-vox-primary text-white">
             {plan.is_active ? "Active" : "Inactive"}
           </div>
         </div>
@@ -84,10 +84,10 @@ export const PlanCard = ({ plan }: { plan: Plan }) => {
           </Link>
         ) : plan.is_active ? (
           <Link to={`/groups/${plan.id}`} className="w-full">
-            <Button className="w-full bg-[#10B981] hover:bg-[#5ba88e] text-white">Join Plan</Button>
+            <Button className="w-full gradient-bg text-white hover:opacity-90 transition-opacity">Join Plan</Button>
           </Link>
         ) : (
-          <Button disabled className="w-full bg-[#5ba88e]">Group Inactive</Button>
+          <Button disabled className="w-full">Group Inactive</Button>
         )}
       </CardFooter>
     </Card>

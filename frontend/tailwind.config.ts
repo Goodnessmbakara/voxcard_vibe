@@ -21,16 +21,16 @@ const config = {
     extend: {
       colors: {
         'vox-primary': {
-          DEFAULT: '#0B9488',
-          light: '#2CD4BF',
+          DEFAULT: '#F59E08',
+          light: '#FFD80F',
         },
         'vox-secondary': {
           DEFAULT: '#001040',
           light: '#0034CF',
         },
         'vox-accent': {
-          DEFAULT: '#F59E08',
-          light: '#FFD80F',
+          DEFAULT: '#0B9488',
+          light: '#2CD4BF',
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

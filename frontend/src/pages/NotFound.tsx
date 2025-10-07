@@ -18,8 +18,8 @@ const NotFound = () => {
     <>
       <div className="container py-20">
         <div className="max-w-md mx-auto text-center">
-          <div className="h-24 w-24 mx-auto mb-6 rounded-full bg-[#5ba88e] flex items-center justify-center">
-            <span className="text-4xl font-bold text-[#9bf8d9]">404</span>
+          <div className="h-24 w-24 mx-auto mb-6 rounded-full bg-vox-primary/20 flex items-center justify-center">
+            <span className="text-4xl font-bold text-vox-primary">404</span>
           </div>
           <h1 className="text-3xl font-bold mb-4">Page not found</h1>
           <p className="text-gray-600 mb-8">
@@ -29,12 +29,12 @@ const NotFound = () => {
             <Button
               variant="outline"
               onClick={() => window.history.back()}
-              className="border-[#5ba88e] text-[#5ba88e] hover:bg-[#5ba88e]/10"
+              className="border-vox-primary text-vox-primary hover:bg-vox-primary/10"
             >
               Go Back
             </Button>
             <Link to="/">
-              <Button className="w-full sm:w-auto bg-[#5ba88e] hover:bg-[#10B981] text-white">
+              <Button className="w-full sm:w-auto gradient-bg text-white hover:opacity-90 transition-opacity">
                 Return Home
               </Button>
             </Link>
