@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import XionWalletService from "@/services/blockchain";
+import { useStacksWallet } from "@/context/StacksWalletProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Clock, X } from "lucide-react";
 import { format } from "date-fns";
@@ -17,7 +17,7 @@ interface TransactionRecordDisplay {
 }
 
 const TransactionHistory = () => {
-  const { isConnected } = XionWalletService.useWallet();
+  const { isConnected } = useStacksWallet();
   
   const [transactions, setTransactions] = useState<TransactionRecordDisplay[]>(
     []
@@ -95,7 +95,7 @@ const TransactionHistory = () => {
             </div>
 
             <div className="text-right">
-              <div className="font-bold text-lg">{tx.amount} XION</div>
+              <div className="font-bold text-lg">{tx.amount} STX</div>
               <div
                 className={`flex items-center text-xs ${
                   tx.status === "confirmed"

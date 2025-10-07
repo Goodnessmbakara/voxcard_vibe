@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import TrustScoreBadge from "@/components/shared/TrustScoreBadge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useContract } from "@/context/ContractProvider";
+import { useContract } from "@/context/StacksContractProvider";
 import { Plan } from "@/types/utils";
 import {
   Card,
@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Check, Users } from "lucide-react";
 import ContributeModal from "@/components/modals/ContributeModal";
-import { useAbstraxionAccount } from "@burnt-labs/abstraxion";
+import { useStacksWallet } from "@/context/StacksWalletProvider";
 import { shortenAddress } from "@/services/utils";
 import type { ParticipantCycleStatus } from "@/types/utils";
 
@@ -40,9 +40,9 @@ const PlanDetail = () => {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
 
-  const { data: account } = useAbstraxionAccount();
+  const { address: walletAddress } = useStacksWallet();
   const { getPlanById } = useContract();
-  const address = (account?.bech32Address || "").toLowerCase();
+  const address = (walletAddress || "").toLowerCase();
   const participants = Array.isArray(plan?.participants) ? plan.participants : [];
   const isParticipantOrAdmin =
     participants.map((addr) => addr.toLowerCase()).includes(address) ||
@@ -280,7 +280,7 @@ const PlanDetail = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-vox-secondary/60">Contribution</p>
-                    <p className="font-bold text-lg">{plan.contribution_amount} XION</p>
+                    <p className="font-bold text-lg">{plan.contribution_amount} STX</p>
                     <p className="text-xs text-vox-secondary/60">{plan.frequency.toLowerCase()}</p>
                   </div>
                   <div>
@@ -325,8 +325,8 @@ const PlanDetail = () => {
 							<p>You have completed payment for this cycle.</p>
 						) : (
 							<>
-								<p>Xion contributed to Cycle: <b>{cycleStatus?.contributed_this_cycle} Xion</b></p>
-								<p>Xion unpaid to Cycle: <b>{cycleStatus?.remaining_this_cycle} Xion</b></p>
+								<p>STX contributed to Cycle: <b>{cycleStatus?.contributed_this_cycle} STX</b></p>
+								<p>STX unpaid to Cycle: <b>{cycleStatus?.remaining_this_cycle} STX</b></p>
 							</>
 						)}
 					</CardContent>
@@ -354,7 +354,7 @@ const PlanDetail = () => {
                     <CardDescription>Understand the savings rotation process.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <p>This is a {plan.frequency.toLowerCase()} group plan where each member contributes {plan.contribution_amount} XION for {plan.duration_months} {plan.duration_months === 1 ? "month" : "months"}.</p>
+                    <p>This is a {plan.frequency.toLowerCase()} group plan where each member contributes {plan.contribution_amount} STX for {plan.duration_months} {plan.duration_months === 1 ? "month" : "months"}.</p>
                     <p>One member gets the pooled amount each cycle. The order is based on trust scores and join order.</p>
                   </CardContent>
                 </Card>

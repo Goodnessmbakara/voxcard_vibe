@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { mockPayouts, defaultUser } from '@/lib/mock-data';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import XionWalletService from '@/services/blockchain';
+import { useStacksWallet } from '@/context/StacksWalletProvider';
 import PlanCard from '@/components/shared/PlanCard';
 import TrustScoreBadge from '@/components/shared/TrustScoreBadge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,12 +11,12 @@ import { Calendar, Clock, Plus, Wallet, Copy, LogOut, RefreshCw, ExternalLink, P
 import { motion, AnimatePresence } from 'framer-motion';
 import { shortenAddress } from '@/services/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Button } from "@burnt-labs/ui";
-import { useContract } from "../context/ContractProvider";
+import { Button } from "@/components/ui/button";
+import { useContract } from "../context/StacksContractProvider";
 import { Plan } from '../types/utils';
 
 
-const explorerUrl = (address: string) => `https://www.mintscan.io/xion-testnet/address/${address}`;
+const explorerUrl = (address: string) => `https://explorer.hiro.so/address/${address}?chain=testnet`;
 
 const ManageWalletModal = ({ open, onClose, address }: { open: boolean; onClose: () => void; address: string; }) => {
 	const { balance } = useContract();
@@ -38,13 +38,13 @@ const ManageWalletModal = ({ open, onClose, address }: { open: boolean; onClose:
         <DialogHeader>
           <DialogTitle>Manage Account</DialogTitle>
           <DialogDescription>
-            View and manage your connected Xion Account.
+            View and manage your connected Stacks Account.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
 			<div className="flex items-center justify-between">
 				<div className="text-sm text-gray-500">Balance</div>
-				<div className="font-semibold">{balance} XION</div>
+				<div className="font-semibold">{balance} STX</div>
 			</div>
           <div className="flex items-center gap-2 bg-gray-50 rounded px-3 py-2">
             <span className="font-mono text-xs break-all">
@@ -83,7 +83,7 @@ const ManageWalletModal = ({ open, onClose, address }: { open: boolean; onClose:
 const Dashboard = () => {
 	const { account, getPlansByCreator, getTrustScore } = useContract();
 	const [userPlans, setUserPlans] = useState<Plan[]>([]);
-  const wallet = XionWalletService.useWallet();
+  const { address: userAddress, balance: userBalance } = useStacksWallet();
 
 
   const [activeTab, setActiveTab] = useState('overview');
@@ -216,7 +216,7 @@ const Dashboard = () => {
                         </div>
                         <div>
                           <p className="text-sm text-vox-secondary/60 font-sans">Total Contributed</p>
-                          <p className="text-xl font-bold text-vox-secondary">350 XION</p>
+                          <p className="text-xl font-bold text-vox-secondary">350 STX</p>
                         </div>
                       </div>
                       {upcomingPayout && (
@@ -225,7 +225,7 @@ const Dashboard = () => {
                             <Calendar size={16} className="mr-2" />
                             <p className="text-sm font-medium">Upcoming Payout</p>
                           </div>
-                          <p className="font-bold text-lg text-vox-accent">{upcomingPayout.amount} XION</p>
+                          <p className="font-bold text-lg text-vox-accent">{upcomingPayout.amount} STX</p>
                           <div className="flex items-center text-sm text-vox-secondary/60 mt-1">
                             <Clock size={14} className="mr-1" />
                             <p>{upcomingPayout.scheduledDate.toLocaleDateString()}</p>
@@ -330,13 +330,13 @@ const Dashboard = () => {
                           {/* Mock contributions */}
                           <div className="grid grid-cols-12 p-3 border-b">
                             <div className="col-span-4 font-sans">Community Savings</div>
-                            <div className="col-span-3 font-sans">100 XION</div>
+                            <div className="col-span-3 font-sans">100 STX</div>
                             <div className="col-span-3 font-sans">Apr 15, 2025</div>
                             <div className="col-span-2 font-sans">2 of 12</div>
                           </div>
                           <div className="grid grid-cols-12 p-3 border-b">
                             <div className="col-span-4 font-sans">Emergency Fund</div>
-                            <div className="col-span-3 font-sans">75 XION</div>
+                            <div className="col-span-3 font-sans">75 STX</div>
                             <div className="col-span-3 font-sans">Mar 10, 2025</div>
                             <div className="col-span-2 font-sans">1 of 8</div>
                           </div>

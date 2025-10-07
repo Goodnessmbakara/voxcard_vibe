@@ -13,7 +13,7 @@ import {
 import { Search, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useContract } from '@/context/ContractProvider';
+import { useContract } from '@/context/StacksContractProvider';
 import { Plan } from '@/types/utils';
 
 const Plans = () => {

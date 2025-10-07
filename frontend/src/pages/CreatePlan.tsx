@@ -36,7 +36,7 @@ import { emptyPlan } from "@/lib/mock-data";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useContract } from "../context/ContractProvider";
+import { useContract } from "../context/StacksContractProvider";
 import { CreatePlanInput } from "@/types/utils";
 
 
@@ -188,7 +188,7 @@ const CreatePlan = () => {
                     name="contribution_amount"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Contribution Amount (XION)</FormLabel>
+                        <FormLabel>Contribution Amount (STX)</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -307,9 +307,9 @@ const CreatePlan = () => {
                       Important Information
                     </h3>
                     <p className="text-sm text-amber-700">
-                      Creating a group will require a transaction on the XION
-                      blockchain. Make sure you are signed in and have
-                      sufficient XION for transaction fees.
+                      Creating a group will require a transaction on the Stacks
+                      blockchain. Make sure your wallet is connected and you have
+                      sufficient STX for transaction fees.
                     </p>
                   </div>
 

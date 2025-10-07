@@ -3,15 +3,9 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { VoxCardLogo } from "@/components/shared/VoxCardLogo";
-import {
-  Abstraxion,
-  useAbstraxionAccount,
-  useAbstraxionSigningClient,
-  useModal,
-} from "@burnt-labs/abstraxion";
-import { Button } from "@burnt-labs/ui";
-import "@burnt-labs/ui/dist/index.css";
+import { Button } from "@/components/ui/button";
 import { shortenAddress } from "@/services/utils";
+import { useStacksWallet } from "@/context/StacksWalletProvider";
 
 export const Header = () => {
   const [showDisconnect, setShowDisconnect] = useState(false);
@@ -19,10 +13,8 @@ export const Header = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Abstraxion hooks for wallet connection
-  const { data: account } = useAbstraxionAccount();
-  const { logout } = useAbstraxionSigningClient();
-  const [, setShowModal] = useModal();
+  // Stacks wallet hooks
+  const { isConnected, address, connectWallet, disconnectWallet } = useStacksWallet();
 
   useEffect(() => {
     if (!showDisconnect) return;
@@ -71,15 +63,13 @@ export const Header = () => {
             >
               About
             </Link>
-            {account?.bech32Address ? (
+            {isConnected && address ? (
               <div className="relative">
                 <Button
-                  fullWidth
                   onClick={() => setShowDisconnect((v) => !v)}
-                  structure="base"
                   className="gradient-bg text-white"
                 >
-                  {shortenAddress(account.bech32Address)}
+                  {shortenAddress(address)}
                 </Button>
                 {showDisconnect && (
                   <div
@@ -89,23 +79,21 @@ export const Header = () => {
                     <button
                       className="block w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100"
                       onClick={() => {
-                        logout();
+                        disconnectWallet();
                         setShowDisconnect(false);
                       }}
                     >
-                      Log out
+                      Disconnect
                     </button>
                   </div>
                 )}
               </div>
             ) : (
               <Button
-                fullWidth
-                onClick={() => setShowModal(true)}
-                structure="base"
+                onClick={connectWallet}
                 className="gradient-bg text-white"
               >
-                Sign In
+                Connect Wallet
               </Button>
             )}
           </div>
@@ -114,7 +102,7 @@ export const Header = () => {
           <div className="md:hidden">
             <Sheet>
               <SheetTrigger asChild>
-                <Button structure="base">
+                <Button variant="ghost">
                   <Menu className="h-6 w-6 text-vox-secondary" />
                 </Button>
               </SheetTrigger>
@@ -153,30 +141,27 @@ export const Header = () => {
 
                   {/* Wallet connect button for mobile */}
                   <div className="mt-8">
-                    {account?.bech32Address ? (
+                    {isConnected && address ? (
                       <>
                         <div className="flex items-center gap-2 bg-gray-50 rounded px-3 py-2 mb-2">
                           <span className="font-mono text-xs break-all">
-                            {shortenAddress(account.bech32Address)}
+                            {shortenAddress(address)}
                           </span>
                         </div>
                         <Button
-                          fullWidth
-                          onClick={logout}
-                          structure="base"
-                          className="border-red-500 text-red-600 hover:bg-red-50 mb-2"
+                          className="w-full border-red-500 text-red-600 hover:bg-red-50 mb-2"
+                          variant="outline"
+                          onClick={disconnectWallet}
                         >
-                          Log out
+                          Disconnect
                         </Button>
                       </>
                     ) : (
                       <Button
-                        fullWidth
-                        onClick={() => setShowModal(true)}
-                        structure="base"
-                        className="gradient-bg text-white"
+                        className="w-full gradient-bg text-white"
+                        onClick={connectWallet}
                       >
-                        Sign In
+                        Connect Wallet
                       </Button>
                     )}
                   </div>
@@ -186,7 +171,6 @@ export const Header = () => {
           </div>
         </div>
       </div>
-      <Abstraxion onClose={() => setShowModal(false)} />
     </nav>
   );
 };

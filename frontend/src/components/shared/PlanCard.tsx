@@ -4,12 +4,12 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useAbstraxionAccount } from '@burnt-labs/abstraxion';
+import { useStacksWallet } from '@/context/StacksWalletProvider';
 
 export const PlanCard = ({ plan }: { plan: Plan }) => {
-  const { data: account } = useAbstraxionAccount();
+  const { address: walletAddress } = useStacksWallet();
   const participants = Array.isArray(plan.participants) ? plan.participants : [];
-  const address = (account?.bech32Address || "").toLowerCase();
+  const address = (walletAddress || "").toLowerCase();
 
   const isParticipantOrAdmin =
     participants.map(addr => addr.toLowerCase()).includes(address) ||
@@ -42,7 +42,7 @@ export const PlanCard = ({ plan }: { plan: Plan }) => {
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
             <p className="text-sm text-gray-500">Contribution</p>
-            <p className="font-bold text-lg">{plan.contribution_amount} XION</p>
+            <p className="font-bold text-lg">{plan.contribution_amount} STX</p>
             <p className="text-xs text-gray-500">per {frequencyToText[plan.frequency]}</p>
           </div>
           <div>

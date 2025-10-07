@@ -20,7 +20,7 @@ const Home = () => {
               >
                 <span className="gradient-text">Transparent</span> &<br />
                 <span className="gradient-text">Secure</span> Community<br />
-                Savings on XION
+                Savings on Stacks
               </motion.h1>
               
               <motion.p 
@@ -78,7 +78,7 @@ const Home = () => {
                     <div className="p-3 bg-gray-50 rounded-lg flex justify-between items-center">
                       <div>
                         <p className="text-sm text-vox-secondary/60">Monthly contribution</p>
-                        <p className="font-semibold">100 XION</p>
+                        <p className="font-semibold">100 STX</p>
                       </div>
                       <div className="bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded">
                         Paid
@@ -98,7 +98,7 @@ const Home = () => {
                     <div className="p-3 bg-gray-50 rounded-lg flex justify-between items-center">
                       <div>
                         <p className="text-sm text-vox-secondary/60">Total pool</p>
-                        <p className="font-semibold">1,200 XION</p>
+                        <p className="font-semibold">1,200 STX</p>
                       </div>
                       <div className="text-xs font-medium">
                         <span className="text-green-600">↑ 9.8%</span> this month
@@ -118,7 +118,7 @@ const Home = () => {
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">How VoxCard Works</h2>
             <p className="text-lg text-vox-secondary/80 font-sans">
-              VoxCard leverages XION's smart contracts to create transparent, secure, and flexible
+              VoxCard leverages Stacks' smart contracts to create transparent, secure, and flexible
               community savings without middlemen or escrow risk.
             </p>
           </div>

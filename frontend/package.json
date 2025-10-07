@@ -11,9 +11,12 @@
         "preview": "vite preview"
     },
     "dependencies": {
-        "@burnt-labs/abstraxion": "^1.0.0-alpha.62",
-        "@burnt-labs/ui": "0.1.0-alpha.17",
-        "@cosmjs/stargate": "^0.36.0",
+        "@stacks/connect": "^7.8.3",
+        "@stacks/transactions": "^6.13.0",
+        "@stacks/network": "^6.13.0",
+        "@stacks/stacks-blockchain-api-types": "^6.1.1",
+        "@turnkey/sdk-browser": "^5.4.4",
+        "@turnkey/sdk-react": "^5.4.4",
         "@hookform/resolvers": "^3.9.0",
         "@radix-ui/react-accordion": "^1.2.0",
         "@radix-ui/react-alert-dialog": "^1.1.1",
@@ -69,7 +72,6 @@
         "zod": "^3.23.8"
     },
     "devDependencies": {
-        "@cosmjs/cosmwasm-stargate": "^0.33.1",
         "@eslint/js": "^9.9.0",
         "@tailwindcss/typography": "^0.5.15",
         "@types/d3-array": "^3.2.1",

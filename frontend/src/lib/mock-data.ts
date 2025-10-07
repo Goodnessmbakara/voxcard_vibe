@@ -94,21 +94,21 @@
     {
       id: 'user-1',
       name: 'Ahmed',
-      walletAddress: 'xion1qxy8r...',
+      walletAddress: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM',
       trustScore: 95,
       plans: ['plan-1', 'plan-2'],
     },
     {
       id: 'user-2',
       name: 'Ngozi',
-      walletAddress: 'xion1qzm5f...',
+      walletAddress: 'ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG',
       trustScore: 88,
       plans: ['plan-2'],
     },
     {
       id: 'user-3',
       name: 'Kofi',
-      walletAddress: 'xion1q9j7r...',
+      walletAddress: 'ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5',
       trustScore: 76,
       plans: ['plan-3'],
     },
@@ -203,7 +203,7 @@
   export const defaultUser = {
     id: 'current-user',
     name: 'You',
-    walletAddress: 'xion1q8j5r...',
+    walletAddress: 'ST2REHHS5J3CERCRBEPMGH7921Q6PYKAADT7JP2VB',
     trustScore: 82,
     plans: ['plan-1', 'plan-3'],
   };

@@ -15,8 +15,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Plan } from "@/types/utils";
 import { Coins } from "lucide-react";
-import { useAbstraxionAccount } from "@burnt-labs/abstraxion";
-import { useContract } from "@/context/ContractProvider";
+import { useStacksWallet } from "@/context/StacksWalletProvider";
+import { useContract } from "@/context/StacksContractProvider";
 import type { ParticipantCycleStatus } from "@/types/utils";
 
 interface ContributeModalProps {
@@ -29,40 +29,40 @@ interface ContributeModalProps {
 
 const ContributeModal = ({ plan, cycleStatus, open, onClose, onSuccess }: ContributeModalProps) => {
   const { toast } = useToast();
-  const { data: account } = useAbstraxionAccount();
+  const { address } = useStacksWallet();
   const { contribute } = useContract();
 
   const defaultAmount = String(cycleStatus?.remaining_this_cycle);
-  const [amountUxion, setAmountUxion] = useState(defaultAmount);
+  const [amountMicroSTX, setAmountMicroSTX] = useState(defaultAmount);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (open) setAmountUxion(defaultAmount);
+    if (open) setAmountMicroSTX(defaultAmount);
   }, [open, defaultAmount]);
 
   const handleContribute = async () => {
-    if (!account?.bech32Address) {
+    if (!address) {
       toast({
-        title: "You are not signed in",
-        description: "Please sign in",
+        title: "Wallet not connected",
+        description: "Please connect your wallet",
         variant: "destructive",
       });
       return;
     }
 
-    if (!/^\d+$/.test(amountUxion)) {
+    if (!/^\d+$/.test(amountMicroSTX)) {
       toast({
         title: "Invalid amount",
-        description: "Amount must be a whole number of uxion (no decimals).",
+        description: "Amount must be a whole number of microSTX (no decimals).",
         variant: "destructive",
       });
       return;
     }
 
-    if (!plan.allow_partial && amountUxion !== String(plan.contribution_amount)) {
+    if (!plan.allow_partial && amountMicroSTX !== String(plan.contribution_amount)) {
       toast({
         title: "Full amount required",
-        description: `This group requires exactly ${plan.contribution_amount} uxion.`,
+        description: `This group requires exactly ${plan.contribution_amount} microSTX.`,
         variant: "destructive",
       });
       return;
@@ -70,10 +70,10 @@ const ContributeModal = ({ plan, cycleStatus, open, onClose, onSuccess }: Contri
 
     setIsSubmitting(true);
     try {
-      const res = await contribute(Number(plan.id), amountUxion);
+      const res = await contribute(Number(plan.id), amountMicroSTX);
       toast({
         title: "Contribution submitted",
-        description: `Tx: ${res.transactionHash}`,
+        description: `Tx: ${res.txId || 'pending'}`,
       });
 	  onSuccess();
       onClose();
@@ -97,11 +97,11 @@ const ContributeModal = ({ plan, cycleStatus, open, onClose, onSuccess }: Contri
 			const numericValue = parseInt(value, 10);
 			// Check if the value is within the range
 			if (value === '' || (numericValue >= 1 && numericValue <= Number(cycleStatus?.remaining_this_cycle))) {
-				setAmountUxion(value);
+				setAmountMicroSTX(value);
 			} else if (numericValue < 1) {
-				setAmountUxion('1'); // Reset to minimum
+				setAmountMicroSTX('1'); // Reset to minimum
 			} else if (numericValue > Number(cycleStatus?.remaining_this_cycle)) {
-				setAmountUxion(cycleStatus?.remaining_this_cycle); // Reset to maximum
+				setAmountMicroSTX(cycleStatus?.remaining_this_cycle); // Reset to maximum
 			}
 		}
 	};
@@ -119,19 +119,19 @@ const ContributeModal = ({ plan, cycleStatus, open, onClose, onSuccess }: Contri
 
         <div className="py-4 space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="amount">Amount (uxion)</Label>
+            <Label htmlFor="amount">Amount (microSTX)</Label>
 			{plan.allow_partial ? (
 				<>
 					<Input
 						id="amount"
 						type="text"
 						inputMode="numeric"
-						value={amountUxion}
+						value={amountMicroSTX}
 						onChange={(e) => handleChange(e)}
 						placeholder={`e.g. ${cycleStatus?.remaining_this_cycle}`}
 					/>
 					<p className="text-sm text-gray-500">
-						Partial payments allowed. Enter whole-number uxion.
+						Partial payments allowed. Enter whole-number microSTX.
 					</p>
 				</>
 				
@@ -139,7 +139,7 @@ const ContributeModal = ({ plan, cycleStatus, open, onClose, onSuccess }: Contri
 				<>
 				<p className="font-bold ">{plan.contribution_amount}</p>
 					<p className="text-sm text-gray-500">
-						Full payment required: {plan.contribution_amount} uxion
+						Full payment required: {plan.contribution_amount} microSTX
 					</p>
 				</>
 				
@@ -156,12 +156,12 @@ const ContributeModal = ({ plan, cycleStatus, open, onClose, onSuccess }: Contri
                   Contribution Info
                 </h3>
                 <div className="mt-2 text-sm text-green-700 space-y-1">
-                  <p>• Expected: {plan.contribution_amount} uxion</p>
+                  <p>• Expected: {plan.contribution_amount} microSTX</p>
                   <p>• Frequency: {plan.frequency.toLowerCase()}</p>
                   {plan.allow_partial && <>
 					<p>Partial payments allowed</p>
-					<p>Contributed: {cycleStatus?.contributed_this_cycle} uxion</p>
-					<p>Left: {cycleStatus?.remaining_this_cycle} uxion</p>
+					<p>Contributed: {cycleStatus?.contributed_this_cycle} microSTX</p>
+					<p>Left: {cycleStatus?.remaining_this_cycle} microSTX</p>
 				  </>}
                 </div>
               </div>
