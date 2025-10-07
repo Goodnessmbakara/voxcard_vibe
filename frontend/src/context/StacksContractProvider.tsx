@@ -106,7 +106,7 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
       postConditionMode: PostConditionMode.Allow,
       appDetails: {
         name: "VoxCard",
-        icon: window.location.origin + "/voxcard-logo.png",
+        icon: window.location.origin + "/voxcard-logo.svg",
       },
       onFinish: (data: any) => {
         console.log("Transaction finished:", data);
@@ -213,7 +213,7 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
       postConditionMode: PostConditionMode.Allow,
       appDetails: {
         name: "VoxCard",
-        icon: window.location.origin + "/voxcard-logo.png",
+        icon: window.location.origin + "/voxcard-logo.svg",
       },
       onFinish: (data: any) => {
         console.log("Join request submitted:", data);
@@ -238,7 +238,7 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
       postConditionMode: PostConditionMode.Allow,
       appDetails: {
         name: "VoxCard",
-        icon: window.location.origin + "/voxcard-logo.png",
+        icon: window.location.origin + "/voxcard-logo.svg",
       },
       onFinish: (data: any) => {
         console.log("Join request approved:", data);
@@ -263,7 +263,7 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
       postConditionMode: PostConditionMode.Allow,
       appDetails: {
         name: "VoxCard",
-        icon: window.location.origin + "/voxcard-logo.png",
+        icon: window.location.origin + "/voxcard-logo.svg",
       },
       onFinish: (data: any) => {
         console.log("Join request denied:", data);
@@ -312,7 +312,7 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
       postConditions: [],
       appDetails: {
         name: "VoxCard",
-        icon: window.location.origin + "/voxcard-logo.png",
+        icon: window.location.origin + "/voxcard-logo.svg",
       },
       onFinish: (data: any) => {
         console.log("Contribution submitted:", data);

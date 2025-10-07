@@ -127,7 +127,7 @@ const Dashboard = () => {
             <p className="text-vox-secondary/70 font-sans">Manage your savings group and track your progress.</p>
           </div>
           {wallet.isConnected && (
-            <Link to="/create-group" className="mt-4 md:mt-0">
+            <Link to="/groups/create" className="mt-4 md:mt-0">
               <Button className="gradient-bg text-white font-sans hover:opacity-90 transition-opacity">
                 <Plus size={16} className="mr-2" />
                 Create Group
@@ -287,7 +287,7 @@ const Dashboard = () => {
 									Browse Groups
 									</Button>
 								</Link>
-								<Link to="/create-group" className="w-full sm:w-auto">
+								<Link to="/groups/create" className="w-full sm:w-auto">
 									<Button className="w-full gradient-bg text-white font-sans hover:opacity-90 transition-opacity">
 									Create a Group
 									</Button>

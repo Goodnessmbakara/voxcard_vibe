@@ -6,7 +6,7 @@ const About = () => {
     <>
       <div className="container py-12 max-w-3xl mx-auto">
         <div className="flex flex-col items-center mb-10">
-          <VoxCardLogo size="lg" />
+          <VoxCardLogo size="lg" colorScheme="teal" />
           <h1 className="text-4xl font-heading font-bold text-vox-secondary mt-4 mb-2">About VoxCard</h1>
           <p className="text-lg text-vox-secondary/80 font-sans text-center max-w-xl">
             VoxCard is a decentralized platform for community savings and rotating credit, inspired by traditional Ajo/Esusu models and powered by Stacks blockchain technology.
@@ -27,6 +27,24 @@ const About = () => {
               <li>Members take turns receiving the pooled funds, based on trust and schedule.</li>
               <li>All transactions are transparent and verifiable on-chain.</li>
             </ul>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-heading font-semibold text-vox-primary mb-4">Logo Variations</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center p-4 border border-gray-200 rounded-lg">
+                <VoxCardLogo size="lg" colorScheme="primary" />
+                <p className="text-sm text-vox-secondary/70 mt-2">Primary (Orange)</p>
+              </div>
+              <div className="text-center p-4 border border-gray-200 rounded-lg">
+                <VoxCardLogo size="lg" colorScheme="accent" />
+                <p className="text-sm text-vox-secondary/70 mt-2">Accent (Blue)</p>
+              </div>
+              <div className="text-center p-4 border border-gray-200 rounded-lg">
+                <VoxCardLogo size="lg" colorScheme="teal" />
+                <p className="text-sm text-vox-secondary/70 mt-2">Teal (Original)</p>
+              </div>
+            </div>
           </section>
           <section>
             <h2 className="text-2xl font-heading font-semibold text-vox-primary mb-2">Why VoxCard?</h2>

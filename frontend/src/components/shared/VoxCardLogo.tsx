@@ -5,6 +5,7 @@ interface VoxCardLogoProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   linkTo?: string;
+  colorScheme?: 'primary' | 'accent' | 'teal';
 }
 
 export const VoxCardLogo = ({
@@ -12,6 +13,7 @@ export const VoxCardLogo = ({
   size = 'md',
   className = '',
   linkTo,
+  colorScheme = 'primary',
 }: VoxCardLogoProps) => {
   const sizeClasses = {
     sm: 'h-6',
@@ -29,13 +31,28 @@ export const VoxCardLogo = ({
     lg: 'text-base',
   };
 
-  const LogoMark = () => (
-    <img 
-      src="/voxcard-logo.png" 
-      alt="VoxCard Logo" 
-      className={`object-contain ${sizeClasses[size]}`}
-    />
-  );
+  const LogoMark = () => {
+    let logoSrc = '/voxcard-logo.svg'; // default primary
+    
+    switch (colorScheme) {
+      case 'accent':
+        logoSrc = '/voxcard-logo-accent.svg';
+        break;
+      case 'teal':
+        logoSrc = '/voxcard-logo-teal.svg';
+        break;
+      default:
+        logoSrc = '/voxcard-logo.svg';
+    }
+    
+    return (
+      <img 
+        src={logoSrc} 
+        alt="VoxCard Logo" 
+        className={`object-contain ${sizeClasses[size]}`}
+      />
+    );
+  };
 
   const LogoText = () => (
     <div className="flex flex-col justify-center">

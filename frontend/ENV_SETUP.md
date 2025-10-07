@@ -9,7 +9,7 @@ VITE_STACKS_NETWORK=testnet
 
 # Contract Configuration
 # The Stacks address where your contract is deployed
-VITE_CONTRACT_ADDRESS=ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+VITE_CONTRACT_ADDRESS=ST3DSAPR2WF7D7SMR6W0R436AA6YYTD8RFT9E9NPH
 
 # The name of your deployed contract
 VITE_CONTRACT_NAME=voxcard-savings

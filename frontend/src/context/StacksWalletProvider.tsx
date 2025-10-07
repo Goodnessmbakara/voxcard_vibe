@@ -86,7 +86,7 @@ export const StacksWalletProvider = ({ children }: { children: ReactNode }) => {
     showConnect({
       appDetails: {
         name: "VoxCard",
-        icon: window.location.origin + "/voxcard-logo.png",
+        icon: window.location.origin + "/voxcard-logo.svg",
       },
       onFinish: () => {
         window.location.reload();

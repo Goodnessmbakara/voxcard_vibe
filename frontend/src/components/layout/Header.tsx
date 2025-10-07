@@ -35,7 +35,7 @@ export const Header = () => {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           {/* Logo and Brand */}
-          <VoxCardLogo variant="full" size="md" linkTo="/" />
+          <VoxCardLogo variant="full" size="md" linkTo="/" colorScheme="primary" />
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
@@ -109,7 +109,7 @@ export const Header = () => {
               <SheetContent>
                 <div className="flex flex-col h-full">
                   <div className="flex items-center justify-between mb-8">
-                    <VoxCardLogo variant="full" size="md" linkTo="/" />
+                    <VoxCardLogo variant="full" size="md" linkTo="/" colorScheme="primary" />
                   </div>
 
                   <nav className="space-y-4">

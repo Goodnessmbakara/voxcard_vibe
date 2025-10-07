@@ -35,11 +35,11 @@ const App = () => {
                     <Routes>
                       <Route path="/" element={<Home />} />
                       <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/create-group" element={<CreatePlan />} />
+                      <Route path="/groups/create" element={<CreatePlan />} />
                       <Route path="/about" element={<About />} />
-                      <Route path="*" element={<NotFound />} />
                       <Route path="/groups" element={<Plans />} />
                       <Route path="/groups/:planId" element={<PlanDetail />} />
+                      <Route path="*" element={<NotFound />} />
                     </Routes>
                   </AnimatePresence>
                 </StacksContractProvider>
