@@ -1,19 +1,19 @@
 export const theme = {
   colors: {
     primary: {
-      main: '#F59E08',
-      light: '#FFD80F',
-      gradient: 'linear-gradient(135deg, #F59E08 0%, #FFD80F 100%)',
+      main: '#F48024',
+      light: '#FF9A56',
+      gradient: 'linear-gradient(135deg, #F48024 0%, #FF9A56 100%)',
     },
     secondary: {
-      main: '#001040',
-      light: '#0034CF',
-      gradient: 'linear-gradient(135deg, #001040 0%, #0034CF 100%)',
+      main: '#242729',
+      light: '#BBC0C4',
+      gradient: 'linear-gradient(135deg, #242729 0%, #BBC0C4 100%)',
     },
     accent: {
-      main: '#0B9488',
-      light: '#2CD4BF',
-      gradient: 'linear-gradient(135deg, #0B9488 0%, #2CD4BF 100%)',
+      main: '#0095FF',
+      light: '#5DBAFF',
+      gradient: 'linear-gradient(135deg, #0095FF 0%, #5DBAFF 100%)',
     },
     background: {
       default: '#FFFFFF',
