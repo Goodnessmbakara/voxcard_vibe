@@ -105,26 +105,24 @@ const Plans = () => {
             </Select>
           </div>
 
-          {/* Create Group Button - Always visible when there are groups */}
-          {filteredPlans.length > 0 && (
-            <motion.div 
-              className="flex justify-end mb-6"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Link to="/groups/create">
-                <motion.div
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-vox-primary text-white font-semibold rounded-lg hover:bg-vox-primary/90 transition-colors shadow-md"
-                  whileHover={{ scale: 1.05, y: -1 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Plus size={20} />
-                  Create New Group
-                </motion.div>
-              </Link>
-            </motion.div>
-          )}
+          {/* Create Group Button - Always visible */}
+          <motion.div 
+            className="flex justify-end mb-6"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Link to="/groups/create">
+              <motion.div
+                className="inline-flex items-center gap-2 px-6 py-3 bg-vox-primary text-white font-semibold rounded-lg hover:bg-vox-primary/90 transition-colors shadow-md"
+                whileHover={{ scale: 1.05, y: -1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Plus size={20} />
+                {filteredPlans.length > 0 ? "Create New Group" : "Create Your First Group"}
+              </motion.div>
+            </Link>
+          </motion.div>
         </motion.div>
 
         {/* Results */}
@@ -284,18 +282,18 @@ const Plans = () => {
 
         {/* Floating Action Button - Always visible */}
         <motion.div
-          className="fixed bottom-8 right-8 z-50"
+          className="fixed bottom-6 right-6 z-50"
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 1, duration: 0.5 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
         >
           <Link to="/groups/create">
             <motion.div
-              className="w-14 h-14 bg-vox-primary rounded-full shadow-lg flex items-center justify-center text-white hover:bg-vox-primary/90 transition-colors"
+              className="w-16 h-16 bg-vox-primary rounded-full shadow-xl flex items-center justify-center text-white hover:bg-vox-primary/90 transition-colors"
               whileHover={{ scale: 1.1, rotate: 90 }}
               whileTap={{ scale: 0.9 }}
             >
-              <Plus size={24} />
+              <Plus size={28} />
             </motion.div>
           </Link>
         </motion.div>
