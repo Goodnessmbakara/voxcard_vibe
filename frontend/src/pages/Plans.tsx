@@ -14,6 +14,7 @@ import { Search, Plus, Users, Shield, Zap, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useContract } from '@/context/StacksContractProvider';
+import { useStacksWallet } from '@/context/StacksWalletProvider';
 import { Plan } from '@/types/utils';
 
 const Plans = () => {
@@ -26,13 +27,21 @@ const Plans = () => {
   const pageSize = 10; // adjust as needed
 
   const { account, getPaginatedPlans } = useContract();
+  const { isConnected } = useStacksWallet();
 
   useEffect(() => {
     const fetchPlans = async () => {
+      // Don't fetch if account is not available yet
+      if (!account) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const { plans: paginatedPlans, totalCount } = await getPaginatedPlans(page, pageSize);
 
         setPlans(paginatedPlans);
+        setError(null); // Clear any previous errors
         // Optionally store totalCount for pagination UI
       } catch (err) {
         console.error('Error fetching groups:', err);
@@ -120,10 +129,46 @@ const Plans = () => {
 
         {/* Results */}
         <AnimatePresence>
-          {loading ? (
+          {!isConnected ? (
+            <motion.div 
+              className="text-center py-16"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <div className="max-w-md mx-auto">
+                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-vox-primary/10 flex items-center justify-center">
+                  <Users size={40} className="text-vox-primary" />
+                </div>
+                <h2 className="text-2xl font-heading font-bold text-gray-800 mb-4">
+                  Connect Your Wallet
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Please connect your wallet to view and join savings groups.
+                </p>
+                <Button 
+                  onClick={() => window.location.reload()} // This will trigger wallet connection via header
+                  className="bg-vox-primary text-white hover:bg-vox-primary/90"
+                >
+                  Connect Wallet
+                </Button>
+              </div>
+            </motion.div>
+          ) : loading ? (
             <motion.div className="text-center py-16">Loading groups...</motion.div>
           ) : error ? (
-            <motion.div className="text-center py-16">{error}</motion.div>
+            <motion.div className="text-center py-16">
+              <div className="max-w-md mx-auto">
+                <h3 className="text-lg font-semibold text-red-600 mb-2">Error Loading Groups</h3>
+                <p className="text-gray-600">{error}</p>
+                <Button 
+                  onClick={() => window.location.reload()} 
+                  className="mt-4 bg-vox-primary text-white hover:bg-vox-primary/90"
+                >
+                  Try Again
+                </Button>
+              </div>
+            </motion.div>
           ) : filteredPlans.length > 0 ? (
             <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPlans.map((plan) => (
@@ -132,89 +177,36 @@ const Plans = () => {
             </motion.div>
           ) : (
             <motion.div 
-              className="text-center py-16"
+              className="text-center py-8"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
               <div className="max-w-4xl mx-auto">
-                {/* Empty State Hero */}
+                {/* Empty State Hero with Immediate CTA */}
                 <motion.div 
-                  className="mb-12"
+                  className="mb-8"
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.2, duration: 0.6 }}
                 >
-                  <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-vox-primary/10 flex items-center justify-center">
-                    <Users size={48} className="text-vox-primary" />
+                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-vox-primary/10 flex items-center justify-center">
+                    <Users size={40} className="text-vox-primary" />
                   </div>
-                  <h2 className="text-3xl font-heading font-bold text-gray-800 mb-4">
+                  <h2 className="text-2xl md:text-3xl font-heading font-bold text-gray-800 mb-3">
                     No groups found
                   </h2>
-                  <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+                  <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
                     Be the first to start a savings group in your community! 
                     Create a group and invite others to save together.
                   </p>
-                </motion.div>
-
-                {/* Create Group CTA Section */}
-                <motion.div 
-                  className="bg-gradient-to-br from-vox-primary/5 to-vox-accent/5 rounded-2xl p-8 md:p-12 border border-vox-primary/10"
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4, duration: 0.6 }}
-                >
-                  <div className="text-center mb-8">
-                    <h3 className="text-2xl font-heading font-bold text-gray-800 mb-4">
-                      Ready to Start Your Savings Journey?
-                    </h3>
-                    <p className="text-gray-600 text-lg">
-                      Create a group and empower your community to save together
-                    </p>
-                  </div>
-
-                  {/* Features Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    {[
-                      {
-                        icon: <Shield size={32} className="text-vox-primary" />,
-                        title: "Secure & Transparent",
-                        description: "Built on Stacks blockchain for complete transparency"
-                      },
-                      {
-                        icon: <Users size={32} className="text-vox-primary" />,
-                        title: "Community Driven",
-                        description: "Connect with trusted members in your network"
-                      },
-                      {
-                        icon: <Zap size={32} className="text-vox-primary" />,
-                        title: "Smart Automation",
-                        description: "Automated payouts and smart contract execution"
-                      }
-                    ].map((feature, idx) => (
-                      <motion.div 
-                        key={feature.title}
-                        className="text-center p-6 bg-white rounded-xl shadow-sm"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.6 + idx * 0.1 }}
-                        whileHover={{ scale: 1.05, y: -5 }}
-                      >
-                        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-vox-primary/10 flex items-center justify-center">
-                          {feature.icon}
-                        </div>
-                        <h4 className="font-semibold text-gray-800 mb-2">{feature.title}</h4>
-                        <p className="text-sm text-gray-600">{feature.description}</p>
-                      </motion.div>
-                    ))}
-                  </div>
-
-                  {/* CTA Button */}
+                  
+                  {/* Immediate CTA Button - Above the fold */}
                   <motion.div 
-                    className="text-center"
+                    className="mb-8"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 0.8 }}
+                    transition={{ delay: 0.4 }}
                   >
                     <Link to="/groups/create">
                       <motion.div
@@ -231,6 +223,59 @@ const Plans = () => {
                       It only takes 2 minutes to get started
                     </p>
                   </motion.div>
+                </motion.div>
+
+                {/* Features Section - Below the main CTA */}
+                <motion.div 
+                  className="bg-gradient-to-br from-vox-primary/5 to-vox-accent/5 rounded-2xl p-6 md:p-8 border border-vox-primary/10"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6, duration: 0.6 }}
+                >
+                  <div className="text-center mb-6">
+                    <h3 className="text-xl font-heading font-bold text-gray-800 mb-3">
+                      Why Choose VoxCard?
+                    </h3>
+                    <p className="text-gray-600">
+                      Experience the future of community savings
+                    </p>
+                  </div>
+
+                  {/* Compact Features Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {[
+                      {
+                        icon: <Shield size={24} className="text-vox-primary" />,
+                        title: "Secure & Transparent",
+                        description: "Built on Stacks blockchain for complete transparency"
+                      },
+                      {
+                        icon: <Users size={24} className="text-vox-primary" />,
+                        title: "Community Driven",
+                        description: "Connect with trusted members in your network"
+                      },
+                      {
+                        icon: <Zap size={24} className="text-vox-primary" />,
+                        title: "Smart Automation",
+                        description: "Automated payouts and smart contract execution"
+                      }
+                    ].map((feature, idx) => (
+                      <motion.div 
+                        key={feature.title}
+                        className="text-center p-4 bg-white rounded-lg shadow-sm"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.8 + idx * 0.1 }}
+                        whileHover={{ scale: 1.02, y: -2 }}
+                      >
+                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-vox-primary/10 flex items-center justify-center">
+                          {feature.icon}
+                        </div>
+                        <h4 className="font-semibold text-gray-800 mb-2 text-sm">{feature.title}</h4>
+                        <p className="text-xs text-gray-600">{feature.description}</p>
+                      </motion.div>
+                    ))}
+                  </div>
                 </motion.div>
               </div>
             </motion.div>

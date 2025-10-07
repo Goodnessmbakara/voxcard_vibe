@@ -163,7 +163,7 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
   };
 
   const getPaginatedPlans = async (page: number, pageSize: number) => {
-    if (!isConnected) {
+    if (!isConnected || !address) {
       throw new Error("Wallet not connected");
     }
 

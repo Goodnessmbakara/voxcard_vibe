@@ -7,10 +7,19 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build outputs
 dist
 dist-ssr
+build
 *.local
+
+# Environment variables
+.env
+.env.local
+.env.*.local
 
 # Editor directories and files
 .vscode/*
@@ -22,12 +31,35 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Package manager files
 pnpm-lock.yaml
 pnpm-workspace.yaml
-.env
 package-lock.json
+
+# Rust/Cargo (if any)
 .cargo
+target/
+
+# CI/CD
 .circleci
 .github
+
+# Temporary files
+*.tmp
+*.backup
+*~
 .editorconfig
 script.sh
+*.sh
+
+# Test outputs
+coverage/
+.nyc_output/
+
+# OS files
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.vscode/tasks.json

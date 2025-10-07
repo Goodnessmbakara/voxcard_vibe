@@ -41,7 +41,7 @@ export const StacksWalletProvider = ({ children }: { children: ReactNode }) => {
   const [balance, setBalance] = useState<string>("--");
 
   const address = userData?.profile?.stxAddress?.testnet || userData?.profile?.stxAddress?.mainnet || null;
-  const isConnected = !!userData;
+  const isConnected = !!userData && !!address;
 
   // Handle pending sign in on mount
   useEffect(() => {
