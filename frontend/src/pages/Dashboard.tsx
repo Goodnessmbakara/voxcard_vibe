@@ -83,7 +83,7 @@ const ManageWalletModal = ({ open, onClose, address }: { open: boolean; onClose:
 const Dashboard = () => {
 	const { account, getPlansByCreator, getTrustScore } = useContract();
 	const [userPlans, setUserPlans] = useState<Plan[]>([]);
-  const { address: userAddress, balance: userBalance } = useStacksWallet();
+  const { address, balance: userBalance, isConnected } = useStacksWallet();
 
 
   const [activeTab, setActiveTab] = useState('overview');
@@ -92,7 +92,7 @@ const Dashboard = () => {
 
   // Mock data usage
   const user = defaultUser;
-  const address = wallet.address ? wallet.address : "Not Signed In";
+  const userAddress = address || "Not Signed In";
 
 	useEffect(() => {
 		const fetchPlans = async () => {
@@ -119,14 +119,14 @@ const Dashboard = () => {
 
   return (
     <>
-      <ManageWalletModal open={showWalletModal} onClose={() => setShowWalletModal(false)} address={address}/>
+      <ManageWalletModal open={showWalletModal} onClose={() => setShowWalletModal(false)} address={userAddress}/>
       <div className="container py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
             <h1 className="text-3xl font-heading font-bold mb-2 text-vox-secondary">Dashboard</h1>
             <p className="text-vox-secondary/70 font-sans">Manage your savings group and track your progress.</p>
           </div>
-          {wallet.isConnected && (
+          {isConnected && (
             <Link to="/groups/create" className="mt-4 md:mt-0">
               <Button className="gradient-bg text-white font-sans hover:opacity-90 transition-opacity">
                 <Plus size={16} className="mr-2" />
@@ -137,7 +137,7 @@ const Dashboard = () => {
         </div>
 
         <AnimatePresence mode="wait">
-          {!wallet.isConnected ? (
+          {!isConnected ? (
             <motion.div
               key="connect-wallet"
               initial={{ opacity: 0, y: 40 }}
@@ -182,7 +182,7 @@ const Dashboard = () => {
                         <div>
                           <p className="text-sm text-vox-secondary/60 font-sans">Account Address</p>
                           <p className="font-mono text-sm font-medium text-vox-secondary">
-                            {shortenAddress(address)}
+                            {shortenAddress(userAddress)}
                           </p>
                         </div>
                         <TrustScoreBadge score={trustScore} />

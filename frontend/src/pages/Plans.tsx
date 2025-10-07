@@ -26,19 +26,23 @@ const Plans = () => {
   const [page, setPage] = useState(1);
   const pageSize = 10; // adjust as needed
 
-  const { account, getPaginatedPlans } = useContract();
-  const { isConnected } = useStacksWallet();
+  const { getPaginatedPlans } = useContract();
+  const { isConnected, address } = useStacksWallet();
 
   useEffect(() => {
     const fetchPlans = async () => {
-      // Don't fetch if account is not available yet
-      if (!account) {
+      // Don't fetch if wallet is not connected
+      if (!isConnected || !address) {
         setLoading(false);
         return;
       }
 
       try {
+        console.log('Fetching plans for page:', page, 'pageSize:', pageSize);
         const { plans: paginatedPlans, totalCount } = await getPaginatedPlans(page, pageSize);
+        
+        console.log('Fetched plans:', paginatedPlans);
+        console.log('Total count:', totalCount);
 
         setPlans(paginatedPlans);
         setError(null); // Clear any previous errors
@@ -52,7 +56,7 @@ const Plans = () => {
     };
 
     fetchPlans();
-  }, [page, account]); // re-run if page changes
+  }, [page, isConnected, address]); // re-run if page, connection, or address changes
 
   const filteredPlans = plans.filter((plan) => {
     const matchesSearch =

@@ -24,7 +24,7 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <StacksWalletProvider>
             <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex flex-col">
               <Header />

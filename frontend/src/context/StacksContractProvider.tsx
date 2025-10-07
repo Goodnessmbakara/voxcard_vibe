@@ -154,8 +154,17 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
         senderAddress: address!,
       });
 
-      const plan = cvToJSON(result).value;
-      return { plan };
+      const response = cvToJSON(result);
+      console.log('getPlanById response for plan', planId, ':', response);
+      
+      // The contract returns (ok (map-get? plans { plan-id: plan-id }))
+      // So we need to check if the result is okay and has a value
+      if (response.okay && response.value) {
+        return { plan: response.value };
+      } else {
+        console.log('Plan not found or no value for plan', planId);
+        return { plan: null };
+      }
     } catch (error) {
       console.error("Error fetching plan:", error);
       return { plan: null };
@@ -178,7 +187,11 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
         senderAddress: address!,
       });
 
-      const totalCount = Number(cvToJSON(countResult).value);
+      const countResponse = cvToJSON(countResult);
+      console.log('Plan count response:', countResponse);
+      
+      const totalCount = countResponse.okay ? Number(countResponse.value) : 0;
+      console.log('Total plan count:', totalCount);
 
       const start = (page - 1) * pageSize + 1;
       const end = Math.min(start + pageSize - 1, totalCount);
@@ -191,6 +204,7 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
         }
       }
 
+      console.log('Final plans array:', plans);
       return { plans, totalCount };
     } catch (error) {
       console.error("Error fetching paginated plans:", error);

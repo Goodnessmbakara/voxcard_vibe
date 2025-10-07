@@ -56,38 +56,6 @@ const Footer = () => {
 		{/* Main content */}
 		<div className="relative z-10 text-white pt-12 pb-8 mt-8">
 			<div className="container mx-auto px-4">
-				{/* Top section with CTA */}
-				<motion.div 
-					className="text-center mb-12"
-					initial={{ opacity: 0, y: 30 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.8 }}
-				>
-					<h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
-						Ready to Start Saving Together?
-					</h2>
-					<p className="text-lg text-gray-200 mb-8 max-w-2xl mx-auto">
-						Join a community of savers and create your financial future together.
-					</p>
-					<div className="flex flex-col sm:flex-row gap-4 justify-center">
-						<motion.a
-							href="/groups/create"
-							className="px-8 py-3 bg-white text-vox-primary font-semibold rounded-lg hover:bg-gray-100 transition-colors border-2 border-white"
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-						>
-							Create a Group
-						</motion.a>
-						<motion.a
-							href="/groups"
-							className="px-8 py-3 bg-vox-secondary text-white font-semibold rounded-lg hover:bg-vox-secondary/90 transition-colors border-2 border-vox-secondary"
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-						>
-							Browse Groups
-						</motion.a>
-					</div>
-				</motion.div>
 
 				{/* Footer content grid */}
 				<div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
