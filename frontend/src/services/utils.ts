@@ -11,3 +11,15 @@ export function getAddressString(addr: unknown): string {
   }
   return "";
 }
+
+// Smart contract constants
+export const MIN_CONTRIBUTION_MICROSTX = 100; // Minimum 100 microSTX = 0.0001 STX
+export const MIN_CONTRIBUTION_STX = 0.0001; // Minimum in STX
+
+export const formatMicroSTXToSTX = (microSTX: number): string => {
+  return (microSTX / 1000000).toFixed(6);
+};
+
+export const formatSTXToMicroSTX = (stx: number): number => {
+  return Math.floor(stx * 1000000);
+};

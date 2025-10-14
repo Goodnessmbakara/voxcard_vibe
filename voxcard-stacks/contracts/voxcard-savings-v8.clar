@@ -1,6 +1,7 @@
-;; VoxCard Savings - Community Savings & Rotating Credit on Stacks
+;; VoxCard Savings v7 - Community Savings & Rotating Credit on Stacks
 ;; A decentralized platform for Ajo/Esusu-style savings groups with trust scoring
 ;; Built for the Stacks Builders Challenge - Embedded Wallet Integration
+;; Version 7: Fixed pagination ArithmeticUnderflow error with safe division
 
 ;; =============================================================================
 ;; CONSTANTS & ERROR CODES
@@ -24,6 +25,8 @@
 (define-constant err-join-request-not-found (err u111))
 (define-constant err-contribution-below-minimum (err u112))
 (define-constant err-partial-payment-not-allowed (err u113))
+(define-constant err-cycle-not-found (err u114))
+(define-constant err-invalid-pagination (err u115))
 
 ;; Group status constants
 (define-constant status-active u1)
@@ -40,6 +43,9 @@
 
 ;; Maximum participants per group
 (define-constant max-participants u100)
+
+;; Maximum page size for pagination
+(define-constant max-page-size u50)
 
 ;; =============================================================================
 ;; DATA VARIABLES
@@ -128,6 +134,15 @@
     }
 )
 
+;; User debt tracking - accumulated unpaid amounts from previous cycles
+(define-map user-debt
+    { group-id: uint, participant: principal }
+    {
+        total-debt: uint,
+        last-updated: uint
+    }
+)
+
 ;; List of all participants for a group (for easier querying)
 (define-map group-participant-list
     { group-id: uint }
@@ -149,6 +164,15 @@
 ;; Index for groups by creator
 (define-map creator-groups
     { creator: principal }
+    {
+        group-count: uint,
+        groups: (list 100 uint)
+    }
+)
+
+;; Index for groups by participant (tracks all groups a user has joined)
+(define-map participant-groups
+    { participant: principal }
     {
         group-count: uint,
         groups: (list 100 uint)
@@ -221,6 +245,25 @@
         (>= contribution-amount min-contribution-amount)
         (> duration-months u0)
         (<= duration-months u60)
+    )
+)
+
+;; Add group to participant index
+(define-private (add-to-participant-index (participant principal) (group-id uint))
+    (let (
+        (current-data (default-to 
+            { group-count: u0, groups: (list) }
+            (map-get? participant-groups { participant: participant })
+        ))
+    )
+        (map-set participant-groups
+            { participant: participant }
+            {
+                group-count: (+ (get group-count current-data) u1),
+                groups: (unwrap-panic (as-max-len? (append (get groups current-data) group-id) u100))
+            }
+        )
+        true
     )
 )
 
@@ -336,6 +379,9 @@
             )
         )
         
+        ;; Add to participant index
+        (add-to-participant-index creator group-id)
+        
         (ok group-id)
     )
 )
@@ -432,6 +478,9 @@
             )
         )
         
+        ;; Add to participant index
+        (add-to-participant-index requester group-id)
+        
         (ok true)
     )
 )
@@ -477,15 +526,28 @@
             (asserts! (is-eq amount (get contribution-amount group)) err-partial-payment-not-allowed)
         )
         
-        ;; Calculate total contributed in this cycle
+        ;; Calculate total contributed in this cycle with debt handling
         (let (
             (existing-contribution (default-to { amount-contributed: u0, contributed-at: u0, is-complete: false } cycle-contribution))
             (previous-contribution (get amount-contributed existing-contribution))
-            (new-total (+ previous-contribution amount))
+            (debt-data (default-to { total-debt: u0, last-updated: u0 } (map-get? user-debt { group-id: group-id, participant: contributor })))
+            (current-debt (get total-debt debt-data))
+            (remaining-debt (if (>= amount current-debt) u0 (- current-debt amount)))
+            (amount-after-debt (if (>= amount current-debt) (- amount current-debt) u0))
+            (new-total (+ previous-contribution amount-after-debt))
             (is-complete (>= new-total (get contribution-amount group)))
         )
             ;; Transfer STX to contract
             (try! (stx-transfer? amount contributor (as-contract tx-sender)))
+            
+            ;; Update debt first (debt must be cleared before contributions count toward current cycle)
+            (map-set user-debt
+                { group-id: group-id, participant: contributor }
+                {
+                    total-debt: remaining-debt,
+                    last-updated: burn-block-height
+                }
+            )
             
             ;; Update cycle contribution
             (map-set cycle-contributions
@@ -514,13 +576,19 @@
                 true
             )
             
-            (ok { contributed: amount, total-this-cycle: new-total, is-complete: is-complete })
+            (ok { 
+                contributed: amount, 
+                total-this-cycle: new-total, 
+                is-complete: is-complete,
+                debt-cleared: (- current-debt remaining-debt),
+                remaining-debt: remaining-debt
+            })
         )
     )
 )
 
 ;; =============================================================================
-;; READ-ONLY FUNCTIONS
+;; READ-ONLY FUNCTIONS - BASIC QUERIES
 ;; =============================================================================
 
 ;; Get group details by ID
@@ -533,49 +601,95 @@
     (ok (var-get group-nonce))
 )
 
-;; Get groups by creator - returns actual group data
+;; Get groups by creator - returns group IDs
 (define-read-only (get-groups-by-creator (creator principal))
     (let (
         (creator-data (default-to 
             { group-count: u0, groups: (list) }
             (map-get? creator-groups { creator: creator })
         ))
-        (group-ids (get groups creator-data))
     )
-        ;; Return the group IDs - frontend will fetch individual groups
-        (ok group-ids)
+        (ok (get groups creator-data))
     )
 )
 
-;; Get all groups (paginated) - returns actual group data
-(define-read-only (get-paginated-groups (page uint) (page-size uint))
+;; Get all groups a user participates in (not just created) - NEW in v6
+(define-read-only (get-groups-by-participant (participant principal))
+    (let (
+        (participant-data (default-to 
+            { group-count: u0, groups: (list) }
+            (map-get? participant-groups { participant: participant })
+        ))
+    )
+        (ok (get groups participant-data))
+    )
+)
+
+;; Get paginated group IDs - IMPROVED in v6
+;; Returns list of group IDs for the requested page
+;; Frontend should fetch individual group details using get-group
+(define-read-only (get-paginated-group-ids (page uint) (page-size uint))
     (let (
         (total-count (var-get group-nonce))
-        (group-1 (map-get? groups { group-id: u1 }))
-        (group-2 (map-get? groups { group-id: u2 }))
-        (group-3 (map-get? groups { group-id: u3 }))
-        (group-4 (map-get? groups { group-id: u4 }))
-        (group-5 (map-get? groups { group-id: u5 }))
-        (group-6 (map-get? groups { group-id: u6 }))
-        (group-7 (map-get? groups { group-id: u7 }))
-        (group-8 (map-get? groups { group-id: u8 }))
-        (group-9 (map-get? groups { group-id: u9 }))
-        (group-10 (map-get? groups { group-id: u10 }))
+        (safe-page-size (if (<= page-size max-page-size) page-size max-page-size))
+        (start-id (+ (* (- page u1) safe-page-size) u1))
+        (end-id (+ start-id safe-page-size))
     )
-        ;; For now, return all groups - frontend can handle pagination
-        ;; In production, implement proper pagination with a more efficient approach
-        (ok {
-            groups: (if (is-some group-1)
-                (if (is-some group-2)
-                    (if (is-some group-3)
-                        (list group-1 group-2 group-3 group-4 group-5 group-6 group-7 group-8 group-9 group-10)
-                        (list group-1 group-2))
-                    (list group-1))
-                (list)),
-            total-count: total-count,
-            page: page,
-            page-size: page-size
-        })
+        ;; Validate pagination parameters
+        (asserts! (> page u0) err-invalid-pagination)
+        (asserts! (> page-size u0) err-invalid-pagination)
+        
+        ;; Calculate total pages safely
+        (let (
+            (total-pages (if (> total-count u0) 
+                (if (<= total-count safe-page-size) 
+                    u1 
+                    (/ (+ total-count safe-page-size (- u1)) safe-page-size)
+                )
+                u0
+            ))
+        )
+            (ok {
+                start-id: start-id,
+                end-id: (if (> end-id total-count) total-count end-id),
+                total-count: total-count,
+                page: page,
+                page-size: safe-page-size,
+                total-pages: total-pages
+            })
+        )
+    )
+)
+
+;; =============================================================================
+;; READ-ONLY FUNCTIONS - PARTICIPANT QUERIES
+;; =============================================================================
+
+;; Check if user is participant
+(define-read-only (is-participant (group-id uint) (user principal))
+    (ok (is-some (map-get? group-participants { group-id: group-id, participant: user })))
+)
+
+;; Get participant details
+(define-read-only (get-participant-details (group-id uint) (participant principal))
+    (ok (map-get? group-participants { group-id: group-id, participant: participant }))
+)
+
+;; Get participants for a group
+(define-read-only (get-group-participants (group-id uint))
+    (let (
+        (participant-list (unwrap! (map-get? group-participant-list { group-id: group-id }) err-group-not-found))
+    )
+        (ok (get participants participant-list))
+    )
+)
+
+;; Get participant count for a group - NEW in v6
+(define-read-only (get-participant-count (group-id uint))
+    (let (
+        (participant-list (unwrap! (map-get? group-participant-list { group-id: group-id }) err-group-not-found))
+    )
+        (ok (get participant-count participant-list))
     )
 )
 
@@ -589,6 +703,10 @@
             (map-get? cycle-contributions { group-id: group-id, participant: participant, cycle: current-cycle })
         ))
         (required-amount (get contribution-amount group))
+        (debt-data (default-to 
+            { total-debt: u0, last-updated: u0 }
+            (map-get? user-debt { group-id: group-id, participant: participant })
+        ))
     )
         (ok {
             contributed-this-cycle: (get amount-contributed contribution),
@@ -596,10 +714,70 @@
                 u0
                 (- required-amount (get amount-contributed contribution))
             ),
-            is-complete: (get is-complete contribution)
+            is-complete: (get is-complete contribution),
+            current-cycle: current-cycle,
+            required-amount: required-amount,
+            total-debt: (get total-debt debt-data)
         })
     )
 )
+
+;; =============================================================================
+;; READ-ONLY FUNCTIONS - CONTRIBUTION QUERIES
+;; =============================================================================
+
+;; Get contribution details for a specific cycle - NEW in v6
+(define-read-only (get-cycle-contribution (group-id uint) (participant principal) (cycle uint))
+    (ok (map-get? cycle-contributions { group-id: group-id, participant: participant, cycle: cycle }))
+)
+
+;; Get cycle recipient information - NEW in v6
+(define-read-only (get-cycle-recipient (group-id uint) (cycle uint))
+    (ok (map-get? cycle-recipients { group-id: group-id, cycle: cycle }))
+)
+
+;; Get user debt for a specific group
+(define-read-only (get-user-debt (group-id uint) (participant principal))
+    (let (
+        (debt-data (default-to 
+            { total-debt: u0, last-updated: u0 }
+            (map-get? user-debt { group-id: group-id, participant: participant })
+        ))
+    )
+        (ok (get total-debt debt-data))
+    )
+)
+
+;; =============================================================================
+;; READ-ONLY FUNCTIONS - JOIN REQUEST QUERIES
+;; =============================================================================
+
+;; Get join requests for a group
+(define-read-only (get-join-requests (group-id uint))
+    (let (
+        (request-list (unwrap! (map-get? group-join-request-list { group-id: group-id }) err-group-not-found))
+    )
+        (ok (get requests request-list))
+    )
+)
+
+;; Get join request details for a specific user - NEW in v6
+(define-read-only (get-join-request-details (group-id uint) (requester principal))
+    (ok (map-get? join-requests { group-id: group-id, requester: requester }))
+)
+
+;; Get join request count for a group - NEW in v6
+(define-read-only (get-join-request-count (group-id uint))
+    (let (
+        (request-list (unwrap! (map-get? group-join-request-list { group-id: group-id }) err-group-not-found))
+    )
+        (ok (get request-count request-list))
+    )
+)
+
+;; =============================================================================
+;; READ-ONLY FUNCTIONS - TRUST SCORE QUERIES
+;; =============================================================================
 
 ;; Get user trust score
 (define-read-only (get-trust-score (user principal))
@@ -611,37 +789,24 @@
     (ok (map-get? trust-scores { user: user }))
 )
 
-;; Get join requests for a group
-(define-read-only (get-join-requests (group-id uint))
-    (let (
-        (request-list (unwrap! (map-get? group-join-request-list { group-id: group-id }) err-group-not-found))
-    )
-        (ok (get requests request-list))
-    )
-)
-
-;; Get participants for a group
-(define-read-only (get-group-participants (group-id uint))
-    (let (
-        (participant-list (unwrap! (map-get? group-participant-list { group-id: group-id }) err-group-not-found))
-    )
-        (ok (get participants participant-list))
-    )
-)
-
-;; Check if user is participant
-(define-read-only (is-participant (group-id uint) (user principal))
-    (ok (is-some (map-get? group-participants { group-id: group-id, participant: user })))
-)
-
-;; Get participant details
-(define-read-only (get-participant-details (group-id uint) (participant principal))
-    (ok (map-get? group-participants { group-id: group-id, participant: participant }))
-)
+;; =============================================================================
+;; READ-ONLY FUNCTIONS - PLATFORM QUERIES
+;; =============================================================================
 
 ;; Get platform fee
 (define-read-only (get-platform-fee-bps)
     (ok (var-get platform-fee-bps))
+)
+
+;; Get contract configuration - NEW in v6
+(define-read-only (get-contract-config)
+    (ok {
+        min-contribution-amount: min-contribution-amount,
+        max-participants: max-participants,
+        max-page-size: max-page-size,
+        platform-fee-bps: (var-get platform-fee-bps),
+        contract-owner: contract-owner
+    })
 )
 
 ;; =============================================================================
@@ -685,3 +850,5 @@
         (ok true)
     )
 )
+
+

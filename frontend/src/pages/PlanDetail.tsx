@@ -17,8 +17,8 @@ import { Progress } from "@/components/ui/progress";
 import { Check, Users } from "lucide-react";
 import ContributeModal from "@/components/modals/ContributeModal";
 import { useStacksWallet } from "@/context/StacksWalletProvider";
-import { shortenAddress } from "@/services/utils";
-import type { ParticipantCycleStatus } from "@/types/utils";
+import { shortenAddress, formatMicroSTXToSTX } from "@/services/utils";
+import type { ParticipantCycleStatus } from "@/context/StacksContractProvider";
 
 
 const PlanDetail = () => {
@@ -80,9 +80,14 @@ const PlanDetail = () => {
 
 	useEffect(() => {
 		const fetchStatus = async () => {
-			if (!planId || !address) return;
+			if (!planId || !address || !isParticipantOrAdmin) {
+				setCycleStatus(null);
+				return;
+			}
 			try {
+			console.log("Fetching cycle status for participant:", address);
 			const res = await getParticipantCycleStatus(Number(planId), address);
+			console.log("Cycle status result:", res);
 			setCycleStatus(res);
 			} catch (e) {
 			console.error("GetParticipantCycleStatus failed:", e);
@@ -90,7 +95,7 @@ const PlanDetail = () => {
 			}
 		};
 		fetchStatus();
-	}, [planId, address, refreshNonce]);
+	}, [planId, address, isParticipantOrAdmin, refreshNonce]);
 
 	const refetchAll = () => setRefreshNonce(n => n + 1);
 	
@@ -280,7 +285,7 @@ const PlanDetail = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-vox-secondary/60">Contribution</p>
-                    <p className="font-bold text-lg">{plan.contribution_amount} STX</p>
+                    <p className="font-bold text-lg">{formatMicroSTXToSTX(Number(plan.contribution_amount))} STX</p>
                     <p className="text-xs text-vox-secondary/60">{plan.frequency.toLowerCase()}</p>
                   </div>
                   <div>
@@ -325,8 +330,11 @@ const PlanDetail = () => {
 							<p>You have completed payment for this cycle.</p>
 						) : (
 							<>
-								<p>STX contributed to Cycle: <b>{cycleStatus?.contributed_this_cycle} STX</b></p>
-								<p>STX unpaid to Cycle: <b>{cycleStatus?.remaining_this_cycle} STX</b></p>
+								<p>STX contributed to Cycle: <b>{formatMicroSTXToSTX(Number(cycleStatus?.contributed_this_cycle || 0))} STX</b></p>
+								<p>STX unpaid to Cycle: <b>{formatMicroSTXToSTX(Number(cycleStatus?.remaining_this_cycle || 0))} STX</b></p>
+								{Number(cycleStatus?.debt || 0) > 0 && (
+									<p className="text-orange-600">Debt from previous cycles: <b>{formatMicroSTXToSTX(Number(cycleStatus?.debt || 0))} STX</b></p>
+								)}
 							</>
 						)}
 					</CardContent>
@@ -354,7 +362,7 @@ const PlanDetail = () => {
                     <CardDescription>Understand the savings rotation process.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <p>This is a {plan.frequency.toLowerCase()} group plan where each member contributes {plan.contribution_amount} STX for {plan.duration_months} {plan.duration_months === 1 ? "month" : "months"}.</p>
+                    <p>This is a {plan.frequency.toLowerCase()} group plan where each member contributes {formatMicroSTXToSTX(Number(plan.contribution_amount))} STX for {plan.duration_months} {plan.duration_months === 1 ? "month" : "months"}.</p>
                     <p>One member gets the pooled amount each cycle. The order is based on trust scores and join order.</p>
                   </CardContent>
                 </Card>

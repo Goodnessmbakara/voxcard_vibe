@@ -19,7 +19,7 @@ import { openContractCall } from "@stacks/connect";
 
 // Contract configuration
 const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS || "";
-const contractName = import.meta.env.VITE_CONTRACT_NAME || "voxcard-savings-v6";
+const contractName = import.meta.env.VITE_CONTRACT_NAME || "voxcard-savings-v7";
 
 const isMainnet = import.meta.env.VITE_STACKS_NETWORK === "mainnet";
 const network = isMainnet ? new StacksMainnet() : new StacksTestnet();
@@ -80,6 +80,7 @@ interface ContractContextProps {
   approveJoinRequest: (groupId: number, requester: string) => Promise<any>;
   denyJoinRequest: (groupId: number, requester: string) => Promise<any>;
   getJoinRequests: (groupId: number) => Promise<{ requests: string[] }>;
+  getGroupParticipants: (groupId: number) => Promise<string[]>;
   contribute: (groupId: number, amountMicroSTX: string) => Promise<any>;
   getParticipantCycleStatus: (groupId: number, participant: string) => Promise<ParticipantCycleStatus>;
   getTrustScore: (sender: string) => Promise<number>;
@@ -99,34 +100,40 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
     // Convert STX to microSTX (1 STX = 1,000,000 microSTX)
     const contributionAmountMicroSTX = Math.floor(parseFloat(group.contribution_amount) * 1_000_000);
 
-    const txOptions = {
-      contractAddress,
-      contractName,
-      functionName: "create-group",
-      functionArgs: [
-        stringUtf8CV(group.name),
-        stringUtf8CV(group.description),
-        uintCV(group.total_participants),
-        uintCV(contributionAmountMicroSTX),
-        stringAsciiCV(group.frequency),
-        uintCV(group.duration_months),
-        uintCV(group.trust_score_required),
-        boolCV(group.allow_partial),
-        stringAsciiCV(group.asset_type),
-      ],
-      network,
-      anchorMode: AnchorMode.Any,
-      postConditionMode: PostConditionMode.Allow,
-      appDetails: {
-        name: "VoxCard",
-        icon: window.location.origin + "/voxcard-logo.svg",
-      },
-      onFinish: (data: any) => {
-        console.log("Transaction finished:", data);
-      },
-    };
+    return new Promise((resolve, reject) => {
+      const txOptions = {
+        contractAddress,
+        contractName,
+        functionName: "create-group",
+        functionArgs: [
+          stringUtf8CV(group.name),
+          stringUtf8CV(group.description),
+          uintCV(group.total_participants),
+          uintCV(contributionAmountMicroSTX),
+          stringAsciiCV(group.frequency),
+          uintCV(group.duration_months),
+          uintCV(group.trust_score_required),
+          boolCV(group.allow_partial),
+          stringAsciiCV(group.asset_type),
+        ],
+        network,
+        anchorMode: AnchorMode.Any,
+        postConditionMode: PostConditionMode.Allow,
+        appDetails: {
+          name: "VoxCard",
+          icon: window.location.origin + "/voxcard-logo.svg",
+        },
+        onFinish: (data: any) => {
+          console.log("Transaction finished:", data);
+          resolve(data);
+        },
+        onCancel: () => {
+          reject(new Error("Transaction cancelled by user"));
+        },
+      };
 
-    return await openContractCall(txOptions);
+      openContractCall(txOptions).catch(reject);
+    });
   };
 
   const getGroupCount = async (): Promise<number> => {
@@ -328,7 +335,7 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
           trust_score_required: parseInt(String(extractedData['trust-score-required'])) || 0,
           allow_partial: Boolean(extractedData['allow-partial']),
           asset_type: String(extractedData['asset-type'] || 'STX'),
-          participants: [], // Will be populated separately if needed
+          participants: [], // Will be populated below
           join_requests: [], // Will be populated separately if needed
           created_at: parseInt(String(extractedData['created-at'])) || 0,
           current_cycle: parseInt(String(extractedData['current-cycle'])) || 1,
@@ -341,6 +348,16 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
         console.log('Group description:', groupData.description);
         console.log('Raw name value:', extractedData.name, 'Type:', typeof extractedData.name);
         console.log('Raw description value:', extractedData.description, 'Type:', typeof extractedData.description);
+        
+        // Fetch participants for this group
+        try {
+          const participants = await getGroupParticipants(groupId);
+          groupData.participants = participants;
+          console.log('Fetched participants for group', groupId, ':', participants);
+        } catch (error) {
+          console.error('Error fetching participants for group', groupId, ':', error);
+          // Keep empty array if participants fetch fails
+        }
         
         return { group: groupData };
       } else {
@@ -439,24 +456,30 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
       throw new Error("Wallet not connected");
     }
 
-    const txOptions = {
-      contractAddress,
-      contractName,
-      functionName: "request-to-join-group",
-      functionArgs: [uintCV(groupId)],
-      network,
-      anchorMode: AnchorMode.Any,
-      postConditionMode: PostConditionMode.Allow,
-      appDetails: {
-        name: "VoxCard",
-        icon: window.location.origin + "/voxcard-logo.svg",
-      },
-      onFinish: (data: any) => {
-        console.log("Join request submitted:", data);
-      },
-    };
+    return new Promise((resolve, reject) => {
+      const txOptions = {
+        contractAddress,
+        contractName,
+        functionName: "request-to-join-group",
+        functionArgs: [uintCV(groupId)],
+        network,
+        anchorMode: AnchorMode.Any,
+        postConditionMode: PostConditionMode.Allow,
+        appDetails: {
+          name: "VoxCard",
+          icon: window.location.origin + "/voxcard-logo.svg",
+        },
+        onFinish: (data: any) => {
+          console.log("Join request submitted:", data);
+          resolve(data);
+        },
+        onCancel: () => {
+          reject(new Error("Transaction cancelled by user"));
+        },
+      };
 
-    return await openContractCall(txOptions);
+      openContractCall(txOptions).catch(reject);
+    });
   };
 
   const approveJoinRequest = async (groupId: number, requester: string): Promise<any> => {
@@ -464,24 +487,30 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
       throw new Error("Wallet not connected");
     }
 
-    const txOptions = {
-      contractAddress,
-      contractName,
-      functionName: "approve-join-request",
-      functionArgs: [uintCV(groupId), principalCV(requester)],
-      network,
-      anchorMode: AnchorMode.Any,
-      postConditionMode: PostConditionMode.Allow,
-      appDetails: {
-        name: "VoxCard",
-        icon: window.location.origin + "/voxcard-logo.svg",
-      },
-      onFinish: (data: any) => {
-        console.log("Join request approved:", data);
-      },
-    };
+    return new Promise((resolve, reject) => {
+      const txOptions = {
+        contractAddress,
+        contractName,
+        functionName: "approve-join-request",
+        functionArgs: [uintCV(groupId), principalCV(requester)],
+        network,
+        anchorMode: AnchorMode.Any,
+        postConditionMode: PostConditionMode.Allow,
+        appDetails: {
+          name: "VoxCard",
+          icon: window.location.origin + "/voxcard-logo.svg",
+        },
+        onFinish: (data: any) => {
+          console.log("Join request approved:", data);
+          resolve(data);
+        },
+        onCancel: () => {
+          reject(new Error("Transaction cancelled by user"));
+        },
+      };
 
-    return await openContractCall(txOptions);
+      openContractCall(txOptions).catch(reject);
+    });
   };
 
   const denyJoinRequest = async (groupId: number, requester: string): Promise<any> => {
@@ -489,24 +518,30 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
       throw new Error("Wallet not connected");
     }
 
-    const txOptions = {
-      contractAddress,
-      contractName,
-      functionName: "deny-join-request",
-      functionArgs: [uintCV(groupId), principalCV(requester)],
-      network,
-      anchorMode: AnchorMode.Any,
-      postConditionMode: PostConditionMode.Allow,
-      appDetails: {
-        name: "VoxCard",
-        icon: window.location.origin + "/voxcard-logo.svg",
-      },
-      onFinish: (data: any) => {
-        console.log("Join request denied:", data);
-      },
-    };
+    return new Promise((resolve, reject) => {
+      const txOptions = {
+        contractAddress,
+        contractName,
+        functionName: "deny-join-request",
+        functionArgs: [uintCV(groupId), principalCV(requester)],
+        network,
+        anchorMode: AnchorMode.Any,
+        postConditionMode: PostConditionMode.Allow,
+        appDetails: {
+          name: "VoxCard",
+          icon: window.location.origin + "/voxcard-logo.svg",
+        },
+        onFinish: (data: any) => {
+          console.log("Join request denied:", data);
+          resolve(data);
+        },
+        onCancel: () => {
+          reject(new Error("Transaction cancelled by user"));
+        },
+      };
 
-    return await openContractCall(txOptions);
+      openContractCall(txOptions).catch(reject);
+    });
   };
 
   const getJoinRequests = async (groupId: number): Promise<{ requests: string[] }> => {
@@ -552,30 +587,79 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
     }
   };
 
+  const getGroupParticipants = async (groupId: number): Promise<string[]> => {
+    if (!isConnected) {
+      throw new Error("Wallet not connected");
+    }
+
+    try {
+      const result = await callReadOnlyFunction({
+        contractAddress,
+        contractName,
+        functionName: "get-group-participants",
+        functionArgs: [uintCV(groupId)],
+        network,
+        senderAddress: address!,
+      });
+
+      const response = cvToJSON(result);
+      console.log('getGroupParticipants response for group', groupId, ':', response);
+      
+      if ((response.okay || response.success) && response.value) {
+        // Handle tuple structure for participants
+        let actualParticipantsData = response.value;
+        if (response.value && response.value.type && response.value.type.includes('tuple') && response.value.value) {
+          actualParticipantsData = response.value.value;
+          console.log('Using participants tuple value data:', actualParticipantsData);
+        }
+        
+        // Extract participants list
+        const participants = actualParticipantsData || [];
+        console.log('Extracted participants:', participants);
+        
+        // Ensure it's an array and convert to strings
+        const participantsArray = Array.isArray(participants) ? participants.map(p => String(p)) : [];
+        return participantsArray;
+      } else {
+        console.log('No participants found for group', groupId);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching group participants:", error);
+      return [];
+    }
+  };
+
   const contribute = async (groupId: number, amountMicroSTX: string) => {
     if (!isConnected || !address) {
       throw new Error("Wallet not connected");
     }
 
-    const txOptions = {
-      contractAddress,
-      contractName,
-      functionName: "contribute",
-      functionArgs: [uintCV(groupId), uintCV(amountMicroSTX)],
-      network,
-      anchorMode: AnchorMode.Any,
-      postConditionMode: PostConditionMode.Allow,
-      postConditions: [],
-      appDetails: {
-        name: "VoxCard",
-        icon: window.location.origin + "/voxcard-logo.svg",
-      },
-      onFinish: (data: any) => {
-        console.log("Contribution submitted:", data);
-      },
-    };
+    return new Promise((resolve, reject) => {
+      const txOptions = {
+        contractAddress,
+        contractName,
+        functionName: "contribute",
+        functionArgs: [uintCV(groupId), uintCV(amountMicroSTX)],
+        network,
+        anchorMode: AnchorMode.Any,
+        postConditionMode: PostConditionMode.Allow,
+        postConditions: [],
+        appDetails: {
+          name: "VoxCard",
+          icon: window.location.origin + "/voxcard-logo.svg",
+        },
+        onFinish: (data: any) => {
+          console.log("Contribution submitted:", data);
+          resolve(data);
+        },
+        onCancel: () => {
+          reject(new Error("Transaction cancelled by user"));
+        },
+      };
 
-    return await openContractCall(txOptions);
+      openContractCall(txOptions).catch(reject);
+    });
   };
 
   const getParticipantCycleStatus = async (groupId: number, participant: string): Promise<ParticipantCycleStatus> => {
@@ -594,7 +678,18 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
       });
 
       const status = cvToJSON(result).value;
-      return status;
+      console.log("Raw participant cycle status:", status);
+      
+      // Map smart contract response to our interface
+      return {
+        contributed_this_cycle: status["contributed-this-cycle"] || "0",
+        remaining_this_cycle: status["remaining-this-cycle"] || "0",
+        is_recipient_this_cycle: false, // Not provided by smart contract
+        cycle: Number(status["current-cycle"] || 0),
+        required: String(status["required-amount"] || "0"),
+        fully_contributed: status["is-complete"] || false,
+        debt: String(status["total-debt"] || "0"),
+      };
     } catch (error) {
       console.error("Error fetching participant cycle status:", error);
       return {
@@ -763,6 +858,7 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
         approveJoinRequest,
         denyJoinRequest,
         getJoinRequests,
+        getGroupParticipants,
         contribute,
         getParticipantCycleStatus,
         getTrustScore,

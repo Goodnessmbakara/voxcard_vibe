@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useStacksWallet } from '@/context/StacksWalletProvider';
+import { formatMicroSTXToSTX } from '@/services/utils';
 
 export const PlanCard = ({ plan }: { plan: Group }) => {
   const { address: walletAddress } = useStacksWallet();
@@ -45,7 +46,7 @@ export const PlanCard = ({ plan }: { plan: Group }) => {
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
             <p className="text-sm text-gray-500">Contribution</p>
-            <p className="font-bold text-lg">{plan.contribution_amount ? (parseInt(plan.contribution_amount) / 1000000).toFixed(2) : '0'} STX</p>
+            <p className="font-bold text-lg">{formatMicroSTXToSTX(Number(plan.contribution_amount || 0))} STX</p>
             <p className="text-xs text-gray-500">per {frequencyToText[plan.frequency] || plan.frequency}</p>
           </div>
           <div>
