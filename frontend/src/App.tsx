@@ -9,6 +9,8 @@ import Dashboard from "./pages/Dashboard";
 import Plans from "./pages/Plans";
 import PlanDetail from "./pages/PlanDetail";
 import CreatePlan from "./pages/CreatePlan";
+import Community from "./pages/Community";
+import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 import About from './pages/About';
 import { StacksWalletProvider } from "./context/StacksWalletProvider";
@@ -36,6 +38,8 @@ const App = () => {
                       <Route path="/" element={<Home />} />
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/groups/create" element={<CreatePlan />} />
+                      <Route path="/community" element={<Community />} />
+                      <Route path="/privacy" element={<Privacy />} />
                       <Route path="/about" element={<About />} />
                       <Route path="/groups" element={<Plans />} />
                       <Route path="/groups/:planId" element={<PlanDetail />} />

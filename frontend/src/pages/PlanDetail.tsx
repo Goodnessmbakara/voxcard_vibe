@@ -145,7 +145,7 @@ const PlanDetail = () => {
 
 			// Remove from list after action
 			setJoinRequests((prev) =>
-			prev.filter((r) => r.requester !== requester)
+			Array.isArray(prev) ? prev.filter((r) => r.requester !== requester) : []
 			);
 			refetchAll()
 		} catch (err) {
@@ -159,10 +159,10 @@ const PlanDetail = () => {
 	};
 
 
-	const filteredJoinRequests = joinRequests.filter(
+	const filteredJoinRequests = Array.isArray(joinRequests) ? joinRequests.filter(
 		(request) =>
 			!request.approvals.includes(address) && !request.denials.includes(address)
-	);
+	) : [];
 
   const handleContribute = async () => {
     setContributeModalOpen(true);

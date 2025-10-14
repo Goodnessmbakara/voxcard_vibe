@@ -1,4 +1,4 @@
-import { Plan } from '../../types/utils';
+import { Group } from '@/context/StacksContractProvider';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -6,19 +6,22 @@ import { Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useStacksWallet } from '@/context/StacksWalletProvider';
 
-export const PlanCard = ({ plan }: { plan: Plan }) => {
+export const PlanCard = ({ plan }: { plan: Group }) => {
   const { address: walletAddress } = useStacksWallet();
   const participants = Array.isArray(plan.participants) ? plan.participants : [];
   const address = (walletAddress || "").toLowerCase();
 
   const isParticipantOrAdmin =
     participants.map(addr => addr.toLowerCase()).includes(address) ||
-    plan.created_by?.toLowerCase() === address;
+    plan.creator?.toLowerCase() === address;
 
-  const frequencyToText = {
+  const frequencyToText: { [key: string]: string } = {
     Daily: 'day',
     Weekly: 'week',
     Monthly: 'month',
+    daily: 'day',
+    weekly: 'week',
+    monthly: 'month',
   };
   return (
     <Card className="ajo-card">
@@ -42,8 +45,8 @@ export const PlanCard = ({ plan }: { plan: Plan }) => {
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
             <p className="text-sm text-gray-500">Contribution</p>
-            <p className="font-bold text-lg">{plan.contribution_amount} STX</p>
-            <p className="text-xs text-gray-500">per {frequencyToText[plan.frequency]}</p>
+            <p className="font-bold text-lg">{plan.contribution_amount ? (parseInt(plan.contribution_amount) / 1000000).toFixed(2) : '0'} STX</p>
+            <p className="text-xs text-gray-500">per {frequencyToText[plan.frequency] || plan.frequency}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Duration</p>

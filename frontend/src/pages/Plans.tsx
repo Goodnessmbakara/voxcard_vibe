@@ -50,31 +50,27 @@ const Plans = () => {
           console.log('Error getting group count:', error);
         }
         
-        // Try to get groups by creator for the current user first
+        // Fetch ALL groups using pagination (not just groups created by current user)
         let allGroups = [];
         try {
-          console.log('Fetching groups by creator for:', address);
-          const creatorGroups = await getGroupsByCreator(address);
-          console.log('Creator groups response:', creatorGroups);
-          if (creatorGroups.groups && Array.isArray(creatorGroups.groups) && creatorGroups.groups.length > 0) {
-            allGroups.push(...creatorGroups.groups);
-            console.log('Added creator groups:', creatorGroups.groups.length);
-          }
+          console.log('Fetching all groups using pagination...');
+          const paginatedResult = await getPaginatedGroups(page, pageSize);
+          console.log('Paginated result:', paginatedResult);
+          allGroups = paginatedResult.groups || [];
+          console.log('Paginated groups found:', allGroups.length);
         } catch (error) {
-          console.log('Error fetching groups by creator:', error);
-        }
-        
-        // If no groups found by creator, try to fetch paginated groups
-        if (allGroups.length === 0) {
-          console.log('No groups found by creator, trying paginated fetch...');
+          console.log('Error fetching paginated groups:', error);
+          // Fallback: try to get groups by creator if pagination fails
           try {
-            const paginatedResult = await getPaginatedGroups(page, pageSize);
-            console.log('Paginated result:', paginatedResult);
-            allGroups = paginatedResult.groups || [];
-            console.log('Paginated groups found:', allGroups.length);
-          } catch (error) {
-            console.log('Error fetching paginated groups:', error);
-            // Don't throw the error, just continue with empty array
+            console.log('Fallback: fetching groups by creator for:', address);
+            const creatorGroups = await getGroupsByCreator(address);
+            console.log('Creator groups response:', creatorGroups);
+            if (creatorGroups.groups && Array.isArray(creatorGroups.groups) && creatorGroups.groups.length > 0) {
+              allGroups.push(...creatorGroups.groups);
+              console.log('Added creator groups:', creatorGroups.groups.length);
+            }
+          } catch (creatorError) {
+            console.log('Error fetching groups by creator:', creatorError);
             allGroups = [];
           }
         }

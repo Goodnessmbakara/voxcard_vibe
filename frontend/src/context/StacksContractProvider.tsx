@@ -237,7 +237,7 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
         }
         
         console.log('Final fetched groups for creator:', groups);
-        return { groups };
+      return { groups };
       } else {
         console.log('No groups found for creator or error in response');
         return { groups: [] };
@@ -280,45 +280,67 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
         const rawGroupData = response.value.value || response.value;
         console.log('Raw group data for ID', groupId, ':', rawGroupData);
         
-        // The rawGroupData should contain the actual group fields
-        // Extract all fields from the wrapped response objects
-        const extractValue = (item) => {
+        // Simple extraction function that was working before
+        const extractValue = (item: any): any => {
           if (typeof item === 'object' && item.value !== undefined) {
             return item.value;
           }
           return item;
         };
         
+        // Handle tuple structure for group data
+        let actualGroupData = rawGroupData;
+        if (rawGroupData && rawGroupData.type && rawGroupData.type.includes('tuple') && rawGroupData.value) {
+          actualGroupData = rawGroupData.value;
+          console.log('Using group tuple value data:', actualGroupData);
+        }
+        
+        console.log('Raw group data before extraction:', rawGroupData);
+        console.log('Actual group data to process:', actualGroupData);
+        
         // Extract all fields from the wrapped response objects
         const extractedData: any = {};
-        for (const [key, value] of Object.entries(rawGroupData)) {
-          extractedData[key] = extractValue(value);
+        
+        // Handle tuple structure properly
+        if (actualGroupData && typeof actualGroupData === 'object') {
+          for (const [key, value] of Object.entries(actualGroupData)) {
+            // Skip the 'type' field if it exists
+            if (key !== 'type') {
+              extractedData[key] = extractValue(value);
+            }
+          }
         }
+        
+        console.log('Extracted data:', extractedData);
+        console.log('Name field specifically:', extractedData.name);
+        console.log('Description field specifically:', extractedData.description);
         
         // Map contract field names to Group interface field names
         const groupData: Group = {
           id: groupId.toString(),
-          name: extractedData.name || '',
-          description: extractedData.description || '',
-          creator: extractedData.creator || '',
-          total_participants: parseInt(extractedData['total-participants']) || 0,
-          contribution_amount: extractedData['contribution-amount'] || '0',
-          frequency: extractedData.frequency || '',
-          duration_months: parseInt(extractedData['duration-months']) || 0,
-          trust_score_required: parseInt(extractedData['trust-score-required']) || 0,
-          allow_partial: extractedData['allow-partial'] || false,
-          asset_type: extractedData['asset-type'] || 'STX',
+          name: String(extractedData.name || ''),
+          description: String(extractedData.description || ''),
+          creator: String(extractedData.creator || ''),
+          total_participants: parseInt(String(extractedData['total-participants'])) || 0,
+          contribution_amount: String(extractedData['contribution-amount'] || '0'),
+          frequency: String(extractedData.frequency || ''),
+          duration_months: parseInt(String(extractedData['duration-months'])) || 0,
+          trust_score_required: parseInt(String(extractedData['trust-score-required'])) || 0,
+          allow_partial: Boolean(extractedData['allow-partial']),
+          asset_type: String(extractedData['asset-type'] || 'STX'),
           participants: [], // Will be populated separately if needed
           join_requests: [], // Will be populated separately if needed
-          created_at: parseInt(extractedData['created-at']) || 0,
-          current_cycle: parseInt(extractedData['current-cycle']) || 1,
-          is_active: extractedData['is-active'] || false,
+          created_at: parseInt(String(extractedData['created-at'])) || 0,
+          current_cycle: parseInt(String(extractedData['current-cycle'])) || 1,
+          is_active: Boolean(extractedData['is-active']),
           payout_index: 0 // Default value, not in contract
         };
         
         console.log('Parsed group data for ID', groupId, ':', groupData);
         console.log('Group name:', groupData.name);
         console.log('Group description:', groupData.description);
+        console.log('Raw name value:', extractedData.name, 'Type:', typeof extractedData.name);
+        console.log('Raw description value:', extractedData.description, 'Type:', typeof extractedData.description);
         
         return { group: groupData };
       } else {
@@ -353,6 +375,13 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
       if ((response.okay || response.success) && response.value) {
         const paginationData = response.value;
         
+        // Handle tuple structure for pagination data
+        let actualPaginationData = paginationData;
+        if (paginationData && paginationData.type && paginationData.type.includes('tuple') && paginationData.value) {
+          actualPaginationData = paginationData.value;
+          console.log('Using pagination tuple value data:', actualPaginationData);
+        }
+        
         // Extract actual values from wrapped objects
         const extractValue = (item) => {
           if (typeof item === 'object' && item.value !== undefined) {
@@ -361,9 +390,9 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
           return item;
         };
         
-        const startId = parseInt(extractValue(paginationData['start-id'])) || 0;
-        const endId = parseInt(extractValue(paginationData['end-id'])) || 0;
-        const totalCount = parseInt(extractValue(paginationData['total-count'])) || 0;
+        const startId = parseInt(extractValue(actualPaginationData['start-id'])) || 0;
+        const endId = parseInt(extractValue(actualPaginationData['end-id'])) || 0;
+        const totalCount = parseInt(extractValue(actualPaginationData['total-count'])) || 0;
         
         console.log('Pagination data:', paginationData);
         console.log('Extracted values - startId:', startId, 'endId:', endId, 'totalCount:', totalCount);
@@ -495,8 +524,28 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
         senderAddress: address!,
       });
 
-      const requests = cvToJSON(result).value;
-      return { requests };
+      const response = cvToJSON(result);
+      console.log('getJoinRequests response for group', groupId, ':', response);
+      
+      if ((response.okay || response.success) && response.value) {
+        // Handle tuple structure for join requests
+        let actualRequestsData = response.value;
+        if (response.value && response.value.type && response.value.type.includes('tuple') && response.value.value) {
+          actualRequestsData = response.value.value;
+          console.log('Using join requests tuple value data:', actualRequestsData);
+        }
+        
+        // Extract requests list
+        const requests = actualRequestsData.requests || actualRequestsData || [];
+        console.log('Extracted join requests:', requests);
+        
+        // Ensure it's an array
+        const requestsArray = Array.isArray(requests) ? requests : [];
+        return { requests: requestsArray };
+      } else {
+        console.log('No join requests found for group', groupId);
+        return { requests: [] };
+      }
     } catch (error) {
       console.error("Error fetching join requests:", error);
       return { requests: [] };
