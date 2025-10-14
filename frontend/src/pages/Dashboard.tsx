@@ -13,7 +13,7 @@ import { shortenAddress } from '@/services/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from "@/components/ui/button";
 import { useContract } from "../context/StacksContractProvider";
-import { Group } from '../context/StacksContractProvider';
+import { Group, ContributionHistory } from '../context/StacksContractProvider';
 
 
 const explorerUrl = (address: string) => `https://explorer.hiro.so/address/${address}?chain=testnet`;
@@ -81,7 +81,7 @@ const ManageWalletModal = ({ open, onClose, address }: { open: boolean; onClose:
 };
 
 const Dashboard = () => {
-	const { account, getGroupsByCreator, getTrustScore, getPaginatedGroups, getTotalContributed } = useContract();
+	const { account, getGroupsByCreator, getTrustScore, getPaginatedGroups, getTotalContributed, getContributionHistory } = useContract();
 	const [userGroups, setUserGroups] = useState<Group[]>([]);
   const { address, balance: userBalance, isConnected } = useStacksWallet();
 
@@ -90,6 +90,7 @@ const Dashboard = () => {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [trustScore, setTrustScore] = useState(50);
   const [totalContributed, setTotalContributed] = useState(0);
+  const [contributionHistory, setContributionHistory] = useState<ContributionHistory[]>([]);
 
   // Mock data usage
   const user = defaultUser;
@@ -113,6 +114,10 @@ const Dashboard = () => {
 					// Fetch total contributed amount
 					const totalContributedAmount = await getTotalContributed(account);
 					setTotalContributed(totalContributedAmount);
+
+					// Fetch contribution history
+					const history = await getContributionHistory(account);
+					setContributionHistory(history);
 				} catch (error) {
 					console.error('Error fetching groups:', error);
 					setUserGroups([]);
@@ -228,7 +233,7 @@ const Dashboard = () => {
                         </div>
                         <div>
                           <p className="text-sm text-vox-secondary/60 font-sans">Total Contributed</p>
-                          <p className="text-xl font-bold text-vox-secondary">{totalContributed} STX</p>
+                          <p className="text-xl font-bold text-vox-secondary">{(totalContributed / 1_000_000).toFixed(2)} STX</p>
                         </div>
                       </div>
                       {upcomingPayout && (
@@ -343,19 +348,32 @@ const Dashboard = () => {
                             <div className="col-span-3 font-medium font-sans text-vox-secondary">Date</div>
                             <div className="col-span-2 font-medium font-sans text-vox-secondary">Round</div>
                           </div>
-                          {/* Mock contributions */}
-                          <div className="grid grid-cols-12 p-3 border-b">
-                            <div className="col-span-4 font-sans">Community Savings</div>
-                            <div className="col-span-3 font-sans">100 STX</div>
-                            <div className="col-span-3 font-sans">Apr 15, 2025</div>
-                            <div className="col-span-2 font-sans">2 of 12</div>
-                          </div>
-                          <div className="grid grid-cols-12 p-3 border-b">
-                            <div className="col-span-4 font-sans">Emergency Fund</div>
-                            <div className="col-span-3 font-sans">75 STX</div>
-                            <div className="col-span-3 font-sans">Mar 10, 2025</div>
-                            <div className="col-span-2 font-sans">1 of 8</div>
-                          </div>
+                          {/* Real contributions from smart contract */}
+                          {contributionHistory.length > 0 ? (
+                            contributionHistory.map((contribution, index) => {
+                              const date = new Date(contribution.contributedAt * 1000); // Convert block height to approximate date
+                              const formattedDate = date.toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric', 
+                                year: 'numeric' 
+                              });
+                              
+                              return (
+                                <div key={index} className="grid grid-cols-12 p-3 border-b">
+                                  <div className="col-span-4 font-sans">{contribution.groupName}</div>
+                                  <div className="col-span-3 font-sans">{contribution.amount} STX</div>
+                                  <div className="col-span-3 font-sans">{formattedDate}</div>
+                                  <div className="col-span-2 font-sans">Cycle {contribution.cycle}</div>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="grid grid-cols-12 p-6 text-center">
+                              <div className="col-span-12 text-vox-secondary/70 font-sans">
+                                No contributions found. Start contributing to see your history here.
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </motion.div>
                     </TabsContent>

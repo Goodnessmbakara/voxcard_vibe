@@ -18,8 +18,8 @@ import { StacksTestnet, StacksMainnet } from "@stacks/network";
 import { openContractCall } from "@stacks/connect";
 
 // Contract configuration
-const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS || "";
-const contractName = import.meta.env.VITE_CONTRACT_NAME || "voxcard-savings-v7";
+const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS || "ST240V2R09J62PD2KDMJ5Z5X85VAB4VNJ9NZ6XBS1";
+const contractName = import.meta.env.VITE_CONTRACT_NAME || "voxcard-savings-v8";
 
 const isMainnet = import.meta.env.VITE_STACKS_NETWORK === "mainnet";
 const network = isMainnet ? new StacksMainnet() : new StacksTestnet();
@@ -66,6 +66,41 @@ export interface ParticipantCycleStatus {
   debt: string;
 }
 
+export interface ContributionHistory {
+  groupId: number;
+  groupName: string;
+  cycle: number;
+  amount: string;
+  contributedAt: number;
+  isComplete: boolean;
+}
+
+export interface CommunityStats {
+  totalUsers: number;
+  totalGroups: number;
+  totalContributed: number;
+  activeGroups: number;
+  completedGroups: number;
+  averageTrustScore: number;
+}
+
+export interface LeaderboardUser {
+  address: string;
+  trustScore: number;
+  totalContributed: number;
+  groupsParticipated: number;
+  rank: number;
+}
+
+export interface RecentActivity {
+  id: string;
+  type: 'contribution' | 'group_created' | 'group_completed' | 'trust_score_up';
+  user: string;
+  description: string;
+  timestamp: number;
+  amount?: number;
+}
+
 interface ContractContextProps {
   address: string;
   account?: string;
@@ -85,6 +120,10 @@ interface ContractContextProps {
   getParticipantCycleStatus: (groupId: number, participant: string) => Promise<ParticipantCycleStatus>;
   getTrustScore: (sender: string) => Promise<number>;
   getTotalContributed: (user: string) => Promise<number>;
+  getContributionHistory: (user: string) => Promise<ContributionHistory[]>;
+  getCommunityStats: () => Promise<CommunityStats>;
+  getLeaderboard: (limit?: number) => Promise<LeaderboardUser[]>;
+  getRecentActivity: (limit?: number) => Promise<RecentActivity[]>;
 }
 
 const ContractContext = createContext<ContractContextProps | null>(null);
@@ -719,11 +758,25 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
         senderAddress: address!,
       });
 
-      const score = Number(cvToJSON(result).value);
-      return score;
+      const response = cvToJSON(result);
+      console.log("Trust score raw result:", result);
+      console.log("Trust score response:", response);
+      console.log("Contract address:", contractAddress);
+      console.log("Contract name:", contractName);
+      console.log("Sender address:", sender);
+      
+      // The contract returns (ok (calculate-trust-score user))
+      if (response.okay && response.value !== undefined) {
+        const score = Number(response.value);
+        console.log("Parsed trust score:", score);
+        return isNaN(score) ? 50 : score; // Default to 50 if NaN
+      } else {
+        console.log("No trust score found, returning default 50");
+        return 50; // Default trust score for new users
+      }
     } catch (error) {
       console.error("Error fetching trust score:", error);
-      return 0;
+      return 50; // Default trust score on error
     }
   };
 
@@ -842,6 +895,307 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
     }
   };
 
+  const getContributionHistory = async (user: string): Promise<ContributionHistory[]> => {
+    if (!isConnected) {
+      throw new Error("Wallet not connected");
+    }
+
+    try {
+      // Get all groups the user participates in
+      const participantGroups = await getGroupsByParticipant(user);
+      const contributionHistory: ContributionHistory[] = [];
+
+      if (participantGroups.groups && Array.isArray(participantGroups.groups)) {
+        // For each group, fetch contribution history
+        for (const group of participantGroups.groups) {
+          try {
+            // Get group details to know current cycle and contribution amount
+            const groupResult = await getGroupById(Number(group.id));
+            if (!groupResult.group) continue;
+
+            const groupData = groupResult.group;
+            const currentCycle = groupData.current_cycle;
+            
+            // Fetch contributions for each cycle up to current cycle
+            for (let cycle = 1; cycle <= currentCycle; cycle++) {
+              try {
+                const contributionResult = await callReadOnlyFunction({
+                  contractAddress,
+                  contractName,
+                  functionName: "get-cycle-contribution",
+                  functionArgs: [uintCV(Number(group.id)), principalCV(user), uintCV(cycle)],
+                  network,
+                  senderAddress: address!,
+                });
+
+                const response = cvToJSON(contributionResult);
+                if (response.okay && response.value) {
+                  const contributionData = response.value.value || response.value;
+                  const amount = contributionData['amount-contributed'] || 0;
+                  const contributedAt = contributionData['contributed-at'] || 0;
+                  const isComplete = contributionData['is-complete'] || false;
+
+                  // Only include contributions with actual amounts
+                  if (Number(amount) > 0) {
+                    contributionHistory.push({
+                      groupId: Number(group.id),
+                      groupName: groupData.name,
+                      cycle: cycle,
+                      amount: (Number(amount) / 1_000_000).toString(), // Convert microSTX to STX
+                      contributedAt: Number(contributedAt),
+                      isComplete: Boolean(isComplete)
+                    });
+                  }
+                }
+              } catch (error) {
+                console.log(`Error getting cycle contribution for group ${group.id}, cycle ${cycle}:`, error);
+                // Continue to next cycle
+              }
+            }
+          } catch (error) {
+            console.log(`Error getting contribution history for group ${group.id}:`, error);
+            // Continue to next group
+          }
+        }
+      }
+
+      // Sort by contribution date (most recent first)
+      contributionHistory.sort((a, b) => b.contributedAt - a.contributedAt);
+      
+      // Limit to recent contributions (last 10)
+      return contributionHistory.slice(0, 10);
+    } catch (error) {
+      console.error("Error fetching contribution history:", error);
+      return [];
+    }
+  };
+
+  const getCommunityStats = async (): Promise<CommunityStats> => {
+    if (!isConnected) {
+      throw new Error("Wallet not connected");
+    }
+
+    try {
+      // Get total group count
+      const totalGroups = await getGroupCount();
+      
+      // Get all groups to calculate stats
+      const allGroupsResult = await getPaginatedGroups(1, 100); // Get first 100 groups
+      const allGroups = allGroupsResult.groups || [];
+      
+      let totalContributed = 0;
+      let activeGroups = 0;
+      let completedGroups = 0;
+      const uniqueUsers = new Set<string>();
+      
+      // Process each group
+      for (const group of allGroups) {
+        if (group.is_active) {
+          activeGroups++;
+        } else {
+          completedGroups++;
+        }
+        
+        // Add creator to unique users
+        uniqueUsers.add(group.creator);
+        
+        // Add participants to unique users
+        if (group.participants && Array.isArray(group.participants)) {
+          group.participants.forEach(participant => uniqueUsers.add(participant));
+        }
+        
+        // Get total contributed for this group (sum of all participants)
+        if (group.participants && Array.isArray(group.participants)) {
+          for (const participant of group.participants) {
+            try {
+              const participantResult = await callReadOnlyFunction({
+                contractAddress,
+                contractName,
+                functionName: "get-participant-details",
+                functionArgs: [uintCV(Number(group.id)), principalCV(participant)],
+                network,
+                senderAddress: address!,
+              });
+
+              const response = cvToJSON(participantResult);
+              if (response.okay && response.value) {
+                const participantData = response.value.value || response.value;
+                const contributed = participantData['total-contributed'] || 0;
+                totalContributed += Number(contributed);
+              }
+            } catch (error) {
+              console.log(`Error getting participant details for group ${group.id}, participant ${participant}:`, error);
+            }
+          }
+        }
+      }
+
+      return {
+        totalUsers: uniqueUsers.size,
+        totalGroups: totalGroups,
+        totalContributed: totalContributed / 1_000_000, // Convert microSTX to STX
+        activeGroups: activeGroups,
+        completedGroups: completedGroups,
+        averageTrustScore: 50 // Default value, could be calculated from trust scores
+      };
+    } catch (error) {
+      console.error("Error fetching community stats:", error);
+      return {
+        totalUsers: 0,
+        totalGroups: 0,
+        totalContributed: 0,
+        activeGroups: 0,
+        completedGroups: 0,
+        averageTrustScore: 0
+      };
+    }
+  };
+
+  const getLeaderboard = async (limit: number = 10): Promise<LeaderboardUser[]> => {
+    if (!isConnected) {
+      throw new Error("Wallet not connected");
+    }
+
+    try {
+      // Get all groups to find all participants
+      const allGroupsResult = await getPaginatedGroups(1, 100);
+      const allGroups = allGroupsResult.groups || [];
+      
+      const userStats = new Map<string, {
+        trustScore: number;
+        totalContributed: number;
+        groupsParticipated: number;
+      }>();
+      
+      // Process each group to collect user statistics
+      for (const group of allGroups) {
+        // Add creator
+        if (group.creator) {
+          const existingStats = userStats.get(group.creator) || {
+            trustScore: 0,
+            totalContributed: 0,
+            groupsParticipated: 0
+          };
+          
+          // Get trust score for this user
+          try {
+            const trustScore = await getTrustScore(group.creator);
+            existingStats.trustScore = trustScore;
+          } catch (error) {
+            console.log(`Error getting trust score for ${group.creator}:`, error);
+          }
+          
+          existingStats.groupsParticipated += 1;
+          userStats.set(group.creator, existingStats);
+        }
+        
+        // Add participants
+        if (group.participants && Array.isArray(group.participants)) {
+          for (const participant of group.participants) {
+            const existingStats = userStats.get(participant) || {
+              trustScore: 0,
+              totalContributed: 0,
+              groupsParticipated: 0
+            };
+            
+            // Get trust score and total contributed for this user
+            try {
+              const trustScore = await getTrustScore(participant);
+              const totalContributed = await getTotalContributed(participant);
+              existingStats.trustScore = trustScore;
+              existingStats.totalContributed = totalContributed / 1_000_000; // Convert to STX
+            } catch (error) {
+              console.log(`Error getting stats for ${participant}:`, error);
+            }
+            
+            existingStats.groupsParticipated += 1;
+            userStats.set(participant, existingStats);
+          }
+        }
+      }
+      
+      // Convert to leaderboard array and sort by trust score
+      const leaderboard: LeaderboardUser[] = Array.from(userStats.entries())
+        .map(([address, stats], index) => ({
+          address,
+          trustScore: stats.trustScore,
+          totalContributed: stats.totalContributed,
+          groupsParticipated: stats.groupsParticipated,
+          rank: index + 1
+        }))
+        .sort((a, b) => b.trustScore - a.trustScore)
+        .slice(0, limit)
+        .map((user, index) => ({
+          ...user,
+          rank: index + 1
+        }));
+      
+      return leaderboard;
+    } catch (error) {
+      console.error("Error fetching leaderboard:", error);
+      return [];
+    }
+  };
+
+  const getRecentActivity = async (limit: number = 10): Promise<RecentActivity[]> => {
+    if (!isConnected) {
+      throw new Error("Wallet not connected");
+    }
+
+    try {
+      // Get all groups to find recent activity
+      const allGroupsResult = await getPaginatedGroups(1, 50); // Get recent groups
+      const allGroups = allGroupsResult.groups || [];
+      
+      const activities: RecentActivity[] = [];
+      
+      // Process each group to find recent activity
+      for (const group of allGroups) {
+        // Add group creation activity
+        activities.push({
+          id: `group-created-${group.id}`,
+          type: 'group_created',
+          user: group.creator,
+          description: `Created new savings group "${group.name}"`,
+          timestamp: group.created_at * 1000 // Convert block height to approximate timestamp
+        });
+        
+        // Get recent contributions for this group
+        if (group.participants && Array.isArray(group.participants)) {
+          for (const participant of group.participants) {
+            try {
+              // Get contribution history for this participant
+              const contributionHistory = await getContributionHistory(participant);
+              
+              // Add recent contributions as activities
+              contributionHistory.forEach((contribution, index) => {
+                if (contribution.groupId === Number(group.id)) {
+                  activities.push({
+                    id: `contribution-${group.id}-${participant}-${contribution.cycle}`,
+                    type: 'contribution',
+                    user: participant,
+                    description: `Made a contribution of ${contribution.amount} STX to "${group.name}"`,
+                    timestamp: contribution.contributedAt * 1000,
+                    amount: parseFloat(contribution.amount)
+                  });
+                }
+              });
+            } catch (error) {
+              console.log(`Error getting contribution history for ${participant}:`, error);
+            }
+          }
+        }
+      }
+      
+      // Sort by timestamp (most recent first) and limit
+      activities.sort((a, b) => b.timestamp - a.timestamp);
+      return activities.slice(0, limit);
+    } catch (error) {
+      console.error("Error fetching recent activity:", error);
+      return [];
+    }
+  };
+
   return (
     <ContractContext.Provider
       value={{
@@ -863,6 +1217,10 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
         getParticipantCycleStatus,
         getTrustScore,
         getTotalContributed,
+        getContributionHistory,
+        getCommunityStats,
+        getLeaderboard,
+        getRecentActivity,
       }}
     >
       {children}

@@ -15,154 +15,70 @@ import {
   Award,
   Target,
   Zap,
-  ArrowRight
+  ArrowRight,
+  Heart
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useStacksWallet } from "@/context/StacksWalletProvider";
 import { useContract } from "@/context/StacksContractProvider";
 import { shortenAddress } from "@/services/utils";
+import { CommunityStats, LeaderboardUser, RecentActivity } from "@/context/StacksContractProvider";
 
-interface CommunityStats {
-  totalUsers: number;
-  totalPlans: number;
-  totalContributed: number;
-  averageTrustScore: number;
-  activePlans: number;
-  completedPlans: number;
-}
-
-interface LeaderboardUser {
-  address: string;
-  trustScore: number;
-  totalContributed: number;
-  plansParticipated: number;
-  rank: number;
-}
-
-interface RecentActivity {
-  id: string;
-  type: 'contribution' | 'plan_created' | 'plan_completed' | 'trust_score_up';
-  user: string;
-  description: string;
-  timestamp: number;
-  amount?: number;
-}
+// Interfaces are now imported from StacksContractProvider
 
 const Community = () => {
   const { isConnected, address } = useStacksWallet();
-  const { getTrustScore, getGroupCount, getTotalContributed } = useContract();
+  const { getTrustScore, getGroupCount, getTotalContributed, getCommunityStats, getLeaderboard, getRecentActivity } = useContract();
   
   const [stats, setStats] = useState<CommunityStats>({
-    totalUsers: 1247,
-    totalPlans: 89,
-    totalContributed: 125000,
-    averageTrustScore: 67,
-    activePlans: 45,
-    completedPlans: 44
+    totalUsers: 0,
+    totalGroups: 0,
+    totalContributed: 0,
+    activeGroups: 0,
+    completedGroups: 0,
+    averageTrustScore: 0
   });
 
-  const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([
-    {
-      address: "SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7",
-      trustScore: 95,
-      totalContributed: 5000,
-      plansParticipated: 8,
-      rank: 1
-    },
-    {
-      address: "SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE",
-      trustScore: 92,
-      totalContributed: 4200,
-      plansParticipated: 6,
-      rank: 2
-    },
-    {
-      address: "SP2C1YREVQMP3A8X9TZ2J5R6O7L9N4M3Q8W1E5R6T",
-      trustScore: 89,
-      totalContributed: 3800,
-      plansParticipated: 7,
-      rank: 3
-    },
-    {
-      address: "SP1K1A24PMKQZMVQQ2A6S0S2QH9A5X8C7N6M4L3P2O",
-      trustScore: 87,
-      totalContributed: 3200,
-      plansParticipated: 5,
-      rank: 4
-    },
-    {
-      address: "SP2N9Y0Q5R8T1W4E7I6O3P9A2S5D8F1G4H7J0K3L6M",
-      trustScore: 85,
-      totalContributed: 2800,
-      plansParticipated: 4,
-      rank: 5
-    }
-  ]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
 
-  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([
-    {
-      id: "1",
-      type: "contribution",
-      user: "SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7",
-      description: "Made a contribution of 50 STX to 'Family Emergency Fund'",
-      timestamp: Date.now() - 1000 * 60 * 30, // 30 minutes ago
-      amount: 50
-    },
-    {
-      id: "2",
-      type: "plan_created",
-      user: "SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE",
-      description: "Created new savings plan 'Tech Workers Circle'",
-      timestamp: Date.now() - 1000 * 60 * 60 * 2, // 2 hours ago
-    },
-    {
-      id: "3",
-      type: "trust_score_up",
-      user: "SP2C1YREVQMP3A8X9TZ2J5R6O7L9N4M3Q8W1E5R6T",
-      description: "Trust score increased to 89 (+5 points)",
-      timestamp: Date.now() - 1000 * 60 * 60 * 4, // 4 hours ago
-    },
-    {
-      id: "4",
-      type: "plan_completed",
-      user: "SP1K1A24PMKQZMVQQ2A6S0S2QH9A5X8C7N6M4L3P2O",
-      description: "Successfully completed 'Holiday Savings 2024' plan",
-      timestamp: Date.now() - 1000 * 60 * 60 * 6, // 6 hours ago
-    },
-    {
-      id: "5",
-      type: "contribution",
-      user: "SP2N9Y0Q5R8T1W4E7I6O3P9A2S5D8F1G4H7J0K3L6M",
-      description: "Made a contribution of 25 STX to 'Education Fund'",
-      timestamp: Date.now() - 1000 * 60 * 60 * 8, // 8 hours ago
-      amount: 25
-    }
-  ]);
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
 
   const [userRank, setUserRank] = useState<number | null>(null);
   const [userTrustScore, setUserTrustScore] = useState<number>(0);
 
   useEffect(() => {
-    if (isConnected && address) {
-      // Fetch user's trust score and rank
-      const fetchUserData = async () => {
-        try {
+    const fetchCommunityData = async () => {
+      try {
+        // Fetch community stats
+        const communityStats = await getCommunityStats();
+        setStats(communityStats);
+        
+        // Fetch leaderboard
+        const leaderboardData = await getLeaderboard(10);
+        setLeaderboard(leaderboardData);
+        
+        // Fetch recent activity
+        const activityData = await getRecentActivity(10);
+        setRecentActivity(activityData);
+        
+        // Fetch user's trust score and rank
+        if (isConnected && address) {
           const trustScore = await getTrustScore(address);
           setUserTrustScore(trustScore);
           
           // Find user's rank in leaderboard
-          const userIndex = leaderboard.findIndex(user => user.address === address);
+          const userIndex = leaderboardData.findIndex(user => user.address === address);
           if (userIndex !== -1) {
             setUserRank(userIndex + 1);
           }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
         }
-      };
-      
-      fetchUserData();
-    }
-  }, [isConnected, address, getTrustScore, leaderboard]);
+      } catch (error) {
+        console.error("Error fetching community data:", error);
+      }
+    };
+    
+    fetchCommunityData();
+  }, [isConnected, address, getTrustScore, getCommunityStats, getLeaderboard, getRecentActivity]);
 
 
   const formatTimeAgo = (timestamp: number) => {
@@ -181,9 +97,9 @@ const Community = () => {
     switch (type) {
       case 'contribution':
         return <TrendingUp className="h-4 w-4 text-green-500" />;
-      case 'plan_created':
+      case 'group_created':
         return <Users className="h-4 w-4 text-blue-500" />;
-      case 'plan_completed':
+      case 'group_completed':
         return <Award className="h-4 w-4 text-yellow-500" />;
       case 'trust_score_up':
         return <Star className="h-4 w-4 text-purple-500" />;
@@ -252,8 +168,8 @@ const Community = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-vox-secondary">Active Plans</p>
-                    <p className="text-3xl font-bold text-vox-secondary">{stats.activePlans}</p>
+                    <p className="text-sm font-medium text-vox-secondary">Active Groups</p>
+                    <p className="text-3xl font-bold text-vox-secondary">{stats.activeGroups}</p>
                   </div>
                   <Target className="h-8 w-8 text-vox-secondary" />
                 </div>
@@ -277,7 +193,7 @@ const Community = () => {
                       <div className="flex items-center space-x-6">
                         <div>
                           <p className="text-sm opacity-90">Trust Score</p>
-                          <p className="text-2xl font-bold">{userTrustScore}</p>
+                          <p className="text-2xl font-bold">{isNaN(userTrustScore) ? '50' : userTrustScore}</p>
                         </div>
                         {userRank && (
                           <div>
@@ -325,7 +241,8 @@ const Community = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {leaderboard.map((user, index) => (
+                    {leaderboard.length > 0 ? (
+                      leaderboard.map((user, index) => (
                       <motion.div
                         key={user.address}
                         initial={{ opacity: 0, x: -20 }}
@@ -346,7 +263,7 @@ const Community = () => {
                           </div>
                           <div>
                             <p className="font-mono text-sm font-medium">{shortenAddress(user.address)}</p>
-                            <p className="text-xs text-gray-500">{user.plansParticipated} plans participated</p>
+                            <p className="text-xs text-gray-500">{user.groupsParticipated} groups participated</p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-4">
@@ -364,7 +281,13 @@ const Community = () => {
                           </Badge>
                         </div>
                       </motion.div>
-                    ))}
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <Trophy className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-500 font-sans">No leaderboard data available yet. Start participating to see rankings!</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -384,7 +307,8 @@ const Community = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {recentActivity.map((activity, index) => (
+                    {recentActivity.length > 0 ? (
+                      recentActivity.map((activity, index) => (
                       <motion.div
                         key={activity.id}
                         initial={{ opacity: 0, x: -20 }}
@@ -410,7 +334,13 @@ const Community = () => {
                           {formatTimeAgo(activity.timestamp)}
                         </div>
                       </motion.div>
-                    ))}
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <Clock className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-500 font-sans">No recent activity yet. Be the first to contribute!</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
