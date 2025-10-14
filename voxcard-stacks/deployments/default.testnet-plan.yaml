@@ -9,10 +9,17 @@ plan:
     - id: 0
       transactions:
         - contract-publish:
-            contract-name: voxcard-savings
+            contract-name: voxcard-savings-v5
             expected-sender: ST3DSAPR2WF7D7SMR6W0R436AA6YYTD8RFT9E9NPH
-            cost: 219390
-            path: contracts/voxcard-savings.clar
+            cost: 246280
+            path: contracts/voxcard-savings-v5.clar
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: voxcard-savings-v6
+            expected-sender: ST3DSAPR2WF7D7SMR6W0R436AA6YYTD8RFT9E9NPH
+            cost: 284760
+            path: contracts/voxcard-savings-v6.clar
             anchor-block-only: true
             clarity-version: 3
       epoch: "3.2"

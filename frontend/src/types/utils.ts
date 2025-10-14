@@ -7,6 +7,7 @@ export interface CreatePlanInput {
   duration_months: number;
   trust_score_required: number;
   allow_partial: boolean;
+  asset_type: string;
 }
 
 export interface Plan {
@@ -21,6 +22,7 @@ export interface Plan {
     duration_months: number;
     trust_score_required: number;
     allow_partial: boolean;
+    asset_type: string;
 	current_cycle: number;
 	is_active: boolean;
 	payout_index: number;

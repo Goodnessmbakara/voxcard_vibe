@@ -4,7 +4,7 @@ import TrustScoreBadge from "@/components/shared/TrustScoreBadge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useContract } from "@/context/StacksContractProvider";
-import { Plan } from "@/types/utils";
+import { Group } from "@/context/StacksContractProvider";	
 import {
   Card,
   CardContent,
@@ -27,7 +27,7 @@ const PlanDetail = () => {
   const [joinRequests, setJoinRequests] = useState([]);
   const { planId } = useParams<{ planId: string }>();
   const { 
-	requestJoinPlan, 
+	requestJoinGroup, 
 	getJoinRequests,
 	approveJoinRequest,
 	denyJoinRequest,
@@ -37,16 +37,16 @@ const PlanDetail = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
   const [contributeModalOpen, setContributeModalOpen] = useState(false);
-  const [plan, setPlan] = useState<Plan | null>(null);
+  const [plan, setPlan] = useState<Group | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
 
   const { address: walletAddress } = useStacksWallet();
-  const { getPlanById } = useContract();
+  const { getGroupById } = useContract();
   const address = (walletAddress || "").toLowerCase();
   const participants = Array.isArray(plan?.participants) ? plan.participants : [];
   const isParticipantOrAdmin =
     participants.map((addr) => addr.toLowerCase()).includes(address) ||
-    plan?.created_by?.toLowerCase() === address;
+    plan?.creator?.toLowerCase() === address;
 
 	const [cycleStatus, setCycleStatus] = useState<ParticipantCycleStatus | null>(null);
 
@@ -57,8 +57,8 @@ const PlanDetail = () => {
   useEffect(() => {
     const fetchPlan = async () => {
       if (planId) {
-        const res = await getPlanById(Number(planId));
-        if (res?.plan) setPlan(res.plan);
+        const res = await getGroupById(Number(planId));
+        if (res?.group) setPlan(res.group);
       }
     };
     fetchPlan();
@@ -106,7 +106,7 @@ const PlanDetail = () => {
 
 	try {
 		setJoining(true);
-		await requestJoinPlan(Number(planId));
+		await requestJoinGroup(Number(planId));
 		setJoined(true);
 	} catch (error) {
 		console.error(error.message)
@@ -233,7 +233,7 @@ const PlanDetail = () => {
               </Button>
             )}
 			
-			{plan?.created_by?.toLowerCase() === address && (
+			{plan?.creator?.toLowerCase() === address && (
 				<Button
 					className="mt-4 md:mt-0 gradient-bg text-white"
 					onClick={() => {
@@ -305,7 +305,7 @@ const PlanDetail = () => {
 
                 <div className="flex justify-between pt-2">
                   <span className="text-sm text-vox-secondary/60">Initiator</span>
-                  <span className="text-sm">{shortenAddress(plan.created_by)}</span>
+                  <span className="text-sm">{shortenAddress(plan.creator)}</span>
                 </div>
 
                 <div className="flex justify-between">

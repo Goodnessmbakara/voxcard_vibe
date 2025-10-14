@@ -15,18 +15,18 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useContract } from '@/context/StacksContractProvider';
 import { useStacksWallet } from '@/context/StacksWalletProvider';
-import { Plan } from '@/types/utils';
+import { Group } from '@/context/StacksContractProvider';
 
 const Plans = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [plans, setPlans] = useState<Plan[]>([]);
+  const [plans, setPlans] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const pageSize = 10; // adjust as needed
 
-  const { getPaginatedPlans } = useContract();
+  const { getGroupCount, getPaginatedGroups, getGroupsByCreator } = useContract();
   const { isConnected, address } = useStacksWallet();
 
   useEffect(() => {
@@ -38,15 +38,52 @@ const Plans = () => {
       }
 
       try {
-        console.log('Fetching plans for page:', page, 'pageSize:', pageSize);
-        const { plans: paginatedPlans, totalCount } = await getPaginatedPlans(page, pageSize);
+        console.log('=== FETCHING GROUPS ===');
+        console.log('Connected address:', address);
+        console.log('Current page:', page);
         
-        console.log('Fetched plans:', paginatedPlans);
-        console.log('Total count:', totalCount);
-
-        setPlans(paginatedPlans);
-        setError(null); // Clear any previous errors
-        // Optionally store totalCount for pagination UI
+        // First, let's try to get the total group count
+        try {
+          const groupCount = await getGroupCount();
+          console.log('Total group count from contract:', groupCount);
+        } catch (error) {
+          console.log('Error getting group count:', error);
+        }
+        
+        // Try to get groups by creator for the current user first
+        let allGroups = [];
+        try {
+          console.log('Fetching groups by creator for:', address);
+          const creatorGroups = await getGroupsByCreator(address);
+          console.log('Creator groups response:', creatorGroups);
+          if (creatorGroups.groups && Array.isArray(creatorGroups.groups) && creatorGroups.groups.length > 0) {
+            allGroups.push(...creatorGroups.groups);
+            console.log('Added creator groups:', creatorGroups.groups.length);
+          }
+        } catch (error) {
+          console.log('Error fetching groups by creator:', error);
+        }
+        
+        // If no groups found by creator, try to fetch paginated groups
+        if (allGroups.length === 0) {
+          console.log('No groups found by creator, trying paginated fetch...');
+          try {
+            const paginatedResult = await getPaginatedGroups(page, pageSize);
+            console.log('Paginated result:', paginatedResult);
+            allGroups = paginatedResult.groups || [];
+            console.log('Paginated groups found:', allGroups.length);
+          } catch (error) {
+            console.log('Error fetching paginated groups:', error);
+            // Don't throw the error, just continue with empty array
+            allGroups = [];
+          }
+        }
+        
+        console.log('=== FINAL RESULT ===');
+        console.log('Total groups found:', allGroups.length);
+        console.log('Groups data:', allGroups);
+        setPlans(allGroups);
+        setError(null);
       } catch (err) {
         console.error('Error fetching groups:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch groups');

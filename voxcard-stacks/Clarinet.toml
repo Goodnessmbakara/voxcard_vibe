@@ -1,14 +1,21 @@
 [project]
 name = 'voxcard-stacks'
-description = ''
+description = 'VoxCard Savings - Community Savings & Rotating Credit on Stacks'
 authors = []
 telemetry = true
 cache_dir = './.cache'
 requirements = []
-[contracts.voxcard-savings]
-path = 'contracts/voxcard-savings.clar'
+
+[contracts.voxcard-savings-v5]
+path = 'contracts/voxcard-savings-v5.clar'
 clarity_version = 3
 epoch = 'latest'
+
+[contracts.voxcard-savings-v6]
+path = 'contracts/voxcard-savings-v6.clar'
+clarity_version = 3
+epoch = 'latest'
+
 [repl.analysis]
 passes = ['check_checker']
 

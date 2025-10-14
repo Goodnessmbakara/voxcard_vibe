@@ -37,7 +37,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useContract } from "../context/StacksContractProvider";
-import { CreatePlanInput } from "@/types/utils";
+import { CreateGroupInput } from "@/context/StacksContractProvider";
 
 
 // Form schema with validation
@@ -50,13 +50,14 @@ const formSchema = z.object({
   duration_months: z.number().min(1).max(36),
   trust_score_required: z.number().min(0).max(100),
   allow_partial: z.boolean().default(false),
+  asset_type: z.string().min(1).max(10),
 });
 
 const CreatePlan = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { createPlan, address } = useContract();
+  const { createGroup, address } = useContract();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -69,6 +70,7 @@ const CreatePlan = () => {
 		duration_months: 1,
 		trust_score_required: 0,
 		allow_partial: false,
+		asset_type: "STX",
 	},
   });
 
@@ -76,7 +78,7 @@ const CreatePlan = () => {
     setIsSubmitting(true);
 	console.log(values)
     try {
-      await createPlan(values as CreatePlanInput);
+      await createGroup(values as CreateGroupInput);
 
       toast({
         title: "Group created on chain!",
@@ -297,6 +299,34 @@ const CreatePlan = () => {
                           onCheckedChange={field.onChange}
                         />
                       </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="asset_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Asset Type</FormLabel>
+                      <FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select asset type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="STX">STX</SelectItem>
+                            <SelectItem value="sBTC">sBTC</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormDescription>
+                        Choose the asset type for contributions in this savings group.
+                      </FormDescription>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />

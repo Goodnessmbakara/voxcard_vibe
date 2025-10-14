@@ -13,7 +13,7 @@ import { shortenAddress } from '@/services/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from "@/components/ui/button";
 import { useContract } from "../context/StacksContractProvider";
-import { Plan } from '../types/utils';
+import { Group } from '../context/StacksContractProvider';
 
 
 const explorerUrl = (address: string) => `https://explorer.hiro.so/address/${address}?chain=testnet`;
@@ -81,34 +81,46 @@ const ManageWalletModal = ({ open, onClose, address }: { open: boolean; onClose:
 };
 
 const Dashboard = () => {
-	const { account, getPlansByCreator, getTrustScore } = useContract();
-	const [userPlans, setUserPlans] = useState<Plan[]>([]);
+	const { account, getGroupsByCreator, getTrustScore, getPaginatedGroups, getTotalContributed } = useContract();
+	const [userGroups, setUserGroups] = useState<Group[]>([]);
   const { address, balance: userBalance, isConnected } = useStacksWallet();
 
 
   const [activeTab, setActiveTab] = useState('overview');
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [trustScore, setTrustScore] = useState(50);
+  const [totalContributed, setTotalContributed] = useState(0);
 
   // Mock data usage
   const user = defaultUser;
   const userAddress = address || "Not Signed In";
 
 	useEffect(() => {
-		const fetchPlans = async () => {
+		const fetchGroups = async () => {
 			if (account) {
-				const response = await getPlansByCreator(account);
+				try {
+					// Use getGroupsByCreator to get groups created by this user
+					const response = await getGroupsByCreator(account);
+					console.log('getGroupsByCreator response:', response);
 
-				const normalizedPlans = response.map((item: any) => item.plan);
+					const userGroups = Array.isArray(response.groups) ? response.groups : [];
+					console.log('User groups:', userGroups);
+					setUserGroups(userGroups);
 
-				setUserPlans(normalizedPlans);
+					const res = await getTrustScore(account);
+					setTrustScore(Number(res))
 
-				const res = await getTrustScore(account);
-				setTrustScore(Number(res))
+					// Fetch total contributed amount
+					const totalContributedAmount = await getTotalContributed(account);
+					setTotalContributed(totalContributedAmount);
+				} catch (error) {
+					console.error('Error fetching groups:', error);
+					setUserGroups([]);
+				}
 			}
 		};
 		
-		fetchPlans();
+		fetchGroups();
 	}, [account]);
 
 
@@ -212,11 +224,11 @@ const Dashboard = () => {
                       <div className="flex justify-between items-center">
                         <div>
                           <p className="text-sm text-vox-secondary/60 font-sans">Active Groups</p>
-                          <p className="text-xl font-bold text-vox-secondary">{userPlans.length}</p>
+                          <p className="text-xl font-bold text-vox-secondary">{Array.isArray(userGroups) ? userGroups.length : 0}</p>
                         </div>
                         <div>
                           <p className="text-sm text-vox-secondary/60 font-sans">Total Contributed</p>
-                          <p className="text-xl font-bold text-vox-secondary">350 STX</p>
+                          <p className="text-xl font-bold text-vox-secondary">{totalContributed} STX</p>
                         </div>
                       </div>
                       {upcomingPayout && (
@@ -251,15 +263,15 @@ const Dashboard = () => {
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ duration: 0.4 }}
 						>
-							{userPlans.filter((plan) => plan.is_active).length > 0 ? (
+							{Array.isArray(userGroups) && userGroups.filter((group) => group.is_active).length > 0 ? (
 							<div className="space-y-6">
 								<h2 className="text-xl font-heading font-semibold text-vox-secondary">
 								Your Active Groups
 								</h2>
-								{userPlans
-								.filter((plan) => plan.is_active)
-								.map((plan) => (
-									<PlanCard key={plan.id} plan={plan} />
+								{userGroups
+								.filter((group) => group.is_active)
+								.map((group) => (
+									<PlanCard key={group.id} plan={group} />
 								))}
 							</div>
 							) : (
@@ -302,13 +314,17 @@ const Dashboard = () => {
                     <TabsContent value="groups">
                       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
                         <h2 className="text-xl font-heading font-semibold text-vox-secondary">All Your Groups</h2>
-                        {userPlans.length > 0 ? (
-                          userPlans.map((p) => (
-                            <PlanCard key={p.id} plan={p} />
+                        {Array.isArray(userGroups) && userGroups.length > 0 ? (
+                          userGroups.map((group) => (
+                            <PlanCard key={group.id} plan={group} />
                           ))
                         ) : (
                           <div className="text-center py-12">
-                            <p className="text-vox-secondary/70 mb-4 font-sans">You haven't joined any group yet.</p>
+                            <p className="text-vox-secondary/70 mb-4 font-sans">
+                              {Array.isArray(userGroups) && userGroups.length === 0 
+                                ? "You haven't joined any group yet." 
+                                : "No groups found."}
+                            </p>
                             <Link to="/groups">
                               <Button className="gradient-bg text-white font-sans hover:opacity-90 transition-opacity">Browse Groups</Button>
                             </Link>

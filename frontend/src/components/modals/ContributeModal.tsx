@@ -13,14 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Plan } from "@/types/utils";
+import { Group } from "@/context/StacksContractProvider";
 import { Coins } from "lucide-react";
 import { useStacksWallet } from "@/context/StacksWalletProvider";
 import { useContract } from "@/context/StacksContractProvider";
-import type { ParticipantCycleStatus } from "@/types/utils";
+import type { ParticipantCycleStatus } from "@/context/StacksContractProvider";
 
 interface ContributeModalProps {
-  plan: Plan;
+  plan: Group;
   cycleStatus?: ParticipantCycleStatus;
   open: boolean;
   onClose: () => void;
