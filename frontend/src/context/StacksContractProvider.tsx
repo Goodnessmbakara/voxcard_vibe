@@ -73,6 +73,7 @@ interface ContractContextProps {
   createGroup: (group: CreateGroupInput) => Promise<any>;
   getGroupCount: () => Promise<number>;
   getGroupsByCreator: (creator: string) => Promise<{ groups: Group[] }>;
+  getGroupsByParticipant: (participant: string) => Promise<{ groups: Group[] }>;
   getGroupById: (groupId: number) => Promise<{ group: Group | null }>;
   getPaginatedGroups: (page: number, pageSize: number) => Promise<{ groups: Group[]; totalCount: number }>;
   requestJoinGroup: (groupId: number) => Promise<any>;
@@ -82,6 +83,7 @@ interface ContractContextProps {
   contribute: (groupId: number, amountMicroSTX: string) => Promise<any>;
   getParticipantCycleStatus: (groupId: number, participant: string) => Promise<ParticipantCycleStatus>;
   getTrustScore: (sender: string) => Promise<number>;
+  getTotalContributed: (user: string) => Promise<number>;
 }
 
 const ContractContext = createContext<ContractContextProps | null>(null);
@@ -152,8 +154,16 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
       console.log('getGroupCount raw result:', result);
       console.log('getGroupCount response:', response);
       
-      if (response.okay && response.value !== undefined) {
-        const count = Number(response.value);
+      if ((response.okay || response.success) && response.value !== undefined) {
+        // Extract the actual value from the wrapped response
+        const extractValue = (item) => {
+          if (typeof item === 'object' && item.value !== undefined) {
+            return item.value;
+          }
+          return item;
+        };
+        
+        const count = Number(extractValue(response.value));
         console.log('Group count:', count);
         return count;
       } else {
@@ -185,14 +195,31 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
       console.log('getGroupsByCreator raw result:', result);
       console.log('getGroupsByCreator response:', response);
       
-      if (response.okay && response.value) {
-        // The contract returns a nested response structure: response.value.value contains the actual list
-        const groupIds = response.value.value || response.value;
+      if ((response.okay || response.success) && response.value) {
+        // The contract returns a list of group IDs
+        // Handle both direct list and nested response structures
+        let groupIds;
+        if (Array.isArray(response.value)) {
+          groupIds = response.value;
+        } else if (response.value.value && Array.isArray(response.value.value)) {
+          groupIds = response.value.value;
+        } else {
+          groupIds = response.value;
+        }
         console.log('Group IDs from contract:', groupIds);
+        
+        // Extract actual values from the response objects
+        const actualGroupIds = groupIds.map(item => {
+          if (typeof item === 'object' && item.value !== undefined) {
+            return item.value;
+          }
+          return item;
+        });
+        console.log('Actual group IDs:', actualGroupIds);
         
         // Fetch individual group details for each ID
         const groups = [];
-        for (const groupId of groupIds) {
+        for (const groupId of actualGroupIds) {
           try {
             const groupResult = await getGroupById(Number(groupId));
             if (groupResult.group) {
@@ -241,8 +268,59 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
       
       // The contract returns (ok (map-get? groups { group-id: group-id }))
       // So we need to check if the result is okay and has a value
-      if (response.okay && response.value) {
-        return { group: response.value };
+      if ((response.okay || response.success) && response.value) {
+        // The response.value might be null if the group doesn't exist
+        // or it might be the actual group data
+        if (response.value === null || response.value === undefined) {
+          console.log('Group not found for ID', groupId);
+          return { group: null };
+        }
+        
+        // Extract the actual group data from the response
+        const rawGroupData = response.value.value || response.value;
+        console.log('Raw group data for ID', groupId, ':', rawGroupData);
+        
+        // The rawGroupData should contain the actual group fields
+        // Extract all fields from the wrapped response objects
+        const extractValue = (item) => {
+          if (typeof item === 'object' && item.value !== undefined) {
+            return item.value;
+          }
+          return item;
+        };
+        
+        // Extract all fields from the wrapped response objects
+        const extractedData: any = {};
+        for (const [key, value] of Object.entries(rawGroupData)) {
+          extractedData[key] = extractValue(value);
+        }
+        
+        // Map contract field names to Group interface field names
+        const groupData: Group = {
+          id: groupId.toString(),
+          name: extractedData.name || '',
+          description: extractedData.description || '',
+          creator: extractedData.creator || '',
+          total_participants: parseInt(extractedData['total-participants']) || 0,
+          contribution_amount: extractedData['contribution-amount'] || '0',
+          frequency: extractedData.frequency || '',
+          duration_months: parseInt(extractedData['duration-months']) || 0,
+          trust_score_required: parseInt(extractedData['trust-score-required']) || 0,
+          allow_partial: extractedData['allow-partial'] || false,
+          asset_type: extractedData['asset-type'] || 'STX',
+          participants: [], // Will be populated separately if needed
+          join_requests: [], // Will be populated separately if needed
+          created_at: parseInt(extractedData['created-at']) || 0,
+          current_cycle: parseInt(extractedData['current-cycle']) || 1,
+          is_active: extractedData['is-active'] || false,
+          payout_index: 0 // Default value, not in contract
+        };
+        
+        console.log('Parsed group data for ID', groupId, ':', groupData);
+        console.log('Group name:', groupData.name);
+        console.log('Group description:', groupData.description);
+        
+        return { group: groupData };
       } else {
         console.log('Group not found or no value for group', groupId);
         return { group: null };
@@ -272,17 +350,27 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
       const response = cvToJSON(result);
       console.log('getPaginatedGroups response:', response);
       
-      if (response.okay && response.value) {
+      if ((response.okay || response.success) && response.value) {
         const paginationData = response.value;
-        const startId = paginationData['start-id'] || 0;
-        const endId = paginationData['end-id'] || 0;
-        const totalCount = paginationData['total-count'] || 0;
+        
+        // Extract actual values from wrapped objects
+        const extractValue = (item) => {
+          if (typeof item === 'object' && item.value !== undefined) {
+            return item.value;
+          }
+          return item;
+        };
+        
+        const startId = parseInt(extractValue(paginationData['start-id'])) || 0;
+        const endId = parseInt(extractValue(paginationData['end-id'])) || 0;
+        const totalCount = parseInt(extractValue(paginationData['total-count'])) || 0;
         
         console.log('Pagination data:', paginationData);
+        console.log('Extracted values - startId:', startId, 'endId:', endId, 'totalCount:', totalCount);
         
         // If no groups exist, return empty array
-        if (totalCount === 0 || startId > endId || startId === 0) {
-          console.log('No groups to fetch - total count is 0');
+        if (totalCount === 0 || startId > endId || startId <= 0) {
+          console.log('No groups to fetch - total count is 0 or invalid range');
           return { groups: [], totalCount: 0 };
         }
         
@@ -495,6 +583,78 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
     }
   };
 
+  const getGroupsByParticipant = async (participant: string) => {
+    if (!isConnected) {
+      throw new Error("Wallet not connected");
+    }
+
+    try {
+      const result = await callReadOnlyFunction({
+        contractAddress,
+        contractName,
+        functionName: "get-groups-by-participant",
+        functionArgs: [principalCV(participant)],
+        network,
+        senderAddress: address!,
+      });
+
+      const response = cvToJSON(result);
+      console.log('getGroupsByParticipant raw result:', result);
+      console.log('getGroupsByParticipant response:', response);
+      
+      if ((response.okay || response.success) && response.value) {
+        // The contract returns a list of group IDs
+        // Handle both direct list and nested response structures
+        let groupIds;
+        if (Array.isArray(response.value)) {
+          groupIds = response.value;
+        } else if (response.value.value && Array.isArray(response.value.value)) {
+          groupIds = response.value.value;
+        } else {
+          groupIds = response.value;
+        }
+        console.log('Participant group IDs from contract:', groupIds);
+        
+        // Extract actual values from the response objects
+        const actualGroupIds = groupIds.map(item => {
+          if (typeof item === 'object' && item.value !== undefined) {
+            return item.value;
+          }
+          return item;
+        });
+        console.log('Actual participant group IDs:', actualGroupIds);
+        
+        // Fetch individual group details for each ID
+        const groups = [];
+        for (const groupId of actualGroupIds) {
+          try {
+            const groupResult = await getGroupById(Number(groupId));
+            if (groupResult.group) {
+              const groupData = {
+                ...groupResult.group,
+                id: groupId.toString()
+              };
+              groups.push(groupData);
+              console.log(`Found participant group ${groupId}:`, groupData);
+            }
+          } catch (error) {
+            console.log(`Participant group ${groupId} not found or error:`, error);
+            // Continue to next group
+          }
+        }
+        
+        console.log('Final fetched participant groups:', groups);
+        return { groups };
+      } else {
+        console.log('No participant groups found or error in response');
+        return { groups: [] };
+      }
+    } catch (error) {
+      console.error("Error fetching groups by participant:", error);
+      return { groups: [] };
+    }
+  };
+
   const getTotalContributed = async (user: string): Promise<number> => {
     if (!isConnected) {
       throw new Error("Wallet not connected");
@@ -507,13 +667,13 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
 
       if (participantGroups.groups && Array.isArray(participantGroups.groups)) {
         // For each group, get the participant details to sum up total contributed
-        for (const groupId of participantGroups.groups) {
+        for (const group of participantGroups.groups) {
           try {
             const participantResult = await callReadOnlyFunction({
               contractAddress,
               contractName,
               functionName: "get-participant-details",
-              functionArgs: [uintCV(groupId), principalCV(user)],
+              functionArgs: [uintCV(Number(group.id)), principalCV(user)],
               network,
               senderAddress: address!,
             });
@@ -525,7 +685,7 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
               totalContributed += Number(contributed);
             }
           } catch (error) {
-            console.log(`Error getting participant details for group ${groupId}:`, error);
+            console.log(`Error getting participant details for group ${group.id}:`, error);
             // Continue to next group
           }
         }
@@ -547,6 +707,7 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
         createGroup,
         getGroupCount,
         getGroupsByCreator,
+        getGroupsByParticipant,
         getGroupById,
         getPaginatedGroups,
         requestJoinGroup,
