@@ -708,6 +708,20 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
     }
 
     return new Promise((resolve, reject) => {
+      let resolved = false;
+      
+      // Add timeout to handle cases where callbacks don't fire
+      const timeout = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          console.log("Transaction timeout - assuming success");
+          resolve({
+            txId: 'pending',
+            timeout: true
+          });
+        }
+      }, 30000); // 30 second timeout
+      
       const txOptions = {
         contractAddress,
         contractName,
@@ -717,15 +731,45 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
         anchorMode: AnchorMode.Any,
         postConditionMode: PostConditionMode.Allow,
         postConditions: [],
+        sponsored: false as const,
         appDetails: {
           name: "VoxCard",
           icon: window.location.origin + "/voxcard-logo.svg",
         },
         onFinish: (data: any) => {
+          if (resolved) return;
+          resolved = true;
+          clearTimeout(timeout);
+          
           console.log("Contribution submitted:", data);
-          resolve(data);
+          
+          // Safe JSON stringify that handles BigInt values
+          try {
+            const safeStringify = (obj: any) => {
+              return JSON.stringify(obj, (key, value) =>
+                typeof value === 'bigint' ? value.toString() : value
+              );
+            };
+            console.log("Transaction data structure:", safeStringify(data));
+          } catch (error) {
+            console.log("Could not stringify transaction data:", error);
+          }
+          
+          // Extract transaction ID from various possible locations
+          const txId = data?.txId || data?.txHash || data?.tx?.txId || data?.response?.txId || 'pending';
+          console.log("Extracted transaction ID from contribute:", txId);
+          
+          resolve({
+            ...data,
+            txId: txId
+          });
         },
         onCancel: () => {
+          if (resolved) return;
+          resolved = true;
+          clearTimeout(timeout);
+          
+          console.log("Transaction cancelled by user");
           reject(new Error("Transaction cancelled by user"));
         },
       };

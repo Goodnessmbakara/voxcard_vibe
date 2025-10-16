@@ -23,6 +23,8 @@ const ContributionSuccessModal = ({
 }: ContributionSuccessModalProps) => {
   const { toast } = useToast();
 
+  console.log("ContributionSuccessModal rendered:", { open, txId, groupName, amount });
+
   const hiroTestnetUrl = `https://explorer.hiro.so/txid/${txId}?chain=testnet`;
   
   const handleCopyTxId = () => {

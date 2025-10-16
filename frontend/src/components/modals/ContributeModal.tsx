@@ -130,16 +130,22 @@ const ContributeModal = ({ plan, cycleStatus, open, onClose, onSuccess }: Contri
       console.log("Contribute result:", res);
       
       const txId = res?.txId || res?.txHash || res?.tx?.txId || 'pending';
+      console.log("Extracted transaction ID:", txId);
       
       // Set success data and show success modal
       setSuccessData({
         txId: txId,
         amount: amountSTX
       });
+      console.log("Setting success modal open");
       setSuccessModalOpen(true);
       
+      // Also call onSuccess to refresh data
       onSuccess();
-      onClose();
+      
+      // Don't close the modal immediately - let the success modal handle it
+      // onSuccess();
+      // onClose();
     } catch (err: any) {
       console.error("Contribution error:", err);
       toast({
@@ -271,6 +277,8 @@ const ContributeModal = ({ plan, cycleStatus, open, onClose, onSuccess }: Contri
           onClose={() => {
             setSuccessModalOpen(false);
             setSuccessData(null);
+            onSuccess(); // Call the success callback
+            onClose(); // Close the contribute modal
           }}
           txId={successData.txId}
           groupName={plan.name}
