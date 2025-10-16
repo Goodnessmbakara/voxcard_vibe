@@ -2,19 +2,49 @@ import { Group } from '@/context/StacksContractProvider';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Users } from 'lucide-react';
+import { Users, Coins } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useStacksWallet } from '@/context/StacksWalletProvider';
 import { formatMicroSTXToSTX } from '@/services/utils';
+import React, { useState } from 'react';
+import ContributeModal from '@/components/modals/ContributeModal';
+import { useContract } from '@/context/StacksContractProvider';
 
 export const PlanCard = ({ plan }: { plan: Group }) => {
   const { address: walletAddress } = useStacksWallet();
+  const { getParticipantCycleStatus } = useContract();
   const participants = Array.isArray(plan.participants) ? plan.participants : [];
   const address = (walletAddress || "").toLowerCase();
+  const [contributeModalOpen, setContributeModalOpen] = useState(false);
+  const [cycleStatus, setCycleStatus] = useState(null);
 
   const isParticipantOrAdmin =
     participants.map(addr => addr.toLowerCase()).includes(address) ||
     plan.creator?.toLowerCase() === address;
+
+  // Fetch cycle status when component mounts if user is a participant
+  React.useEffect(() => {
+    const fetchCycleStatus = async () => {
+      if (isParticipantOrAdmin && address) {
+        try {
+          const status = await getParticipantCycleStatus(Number(plan.id), address);
+          setCycleStatus(status);
+        } catch (error) {
+          console.error('Error fetching cycle status:', error);
+        }
+      }
+    };
+    fetchCycleStatus();
+  }, [isParticipantOrAdmin, address, plan.id]);
+
+  const handleContribute = () => {
+    setContributeModalOpen(true);
+  };
+
+  const handleContributeSuccess = () => {
+    // Refresh the page or update data
+    window.location.reload();
+  };
 
   const frequencyToText: { [key: string]: string } = {
     Daily: 'day',
@@ -25,8 +55,9 @@ export const PlanCard = ({ plan }: { plan: Group }) => {
     monthly: 'month',
   };
   return (
-    <Card className="ajo-card">
-      <CardHeader className="pb-2">
+    <>
+      <Card className="ajo-card">
+        <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-lg md:text-xl">{plan.name}</CardTitle>
@@ -81,11 +112,40 @@ export const PlanCard = ({ plan }: { plan: Group }) => {
           className="h-2"
         />
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col gap-2">
         {isParticipantOrAdmin ? (
-          <Link to={`/groups/${plan.id}`} className="w-full">
-            <Button className="w-full" variant="outline">View Details</Button>
-          </Link>
+          <>
+            <div className="flex gap-2 w-full">
+              <Button 
+                onClick={handleContribute}
+                className="flex-1 gradient-bg text-white hover:opacity-90 transition-opacity"
+                disabled={cycleStatus?.fully_contributed}
+              >
+                <Coins size={16} className="mr-2" />
+                {cycleStatus?.fully_contributed ? 'Contributed' : 'Contribute'}
+              </Button>
+              <Link to={`/groups/${plan.id}`} className="flex-1">
+                <Button className="w-full" variant="outline">View Details</Button>
+              </Link>
+            </div>
+            {cycleStatus && !cycleStatus.fully_contributed && (
+              <p className="text-xs text-gray-500 text-center">
+                Remaining: {formatMicroSTXToSTX(Number(cycleStatus.remaining_this_cycle || 0))} STX
+              </p>
+            )}
+            {/* Show expected contribution if cycle status is not available but user is creator */}
+            {!cycleStatus && plan.creator?.toLowerCase() === address && (
+              <p className="text-xs text-gray-500 text-center">
+                Expected: {formatMicroSTXToSTX(Number(plan.contribution_amount))} STX
+              </p>
+            )}
+            {/* Debug info for remaining amount */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="text-xs text-gray-400 mt-1">
+                Debug: cycleStatus={JSON.stringify(cycleStatus, null, 2)}
+              </div>
+            )}
+          </>
         ) : plan.is_active ? (
           <Link to={`/groups/${plan.id}`} className="w-full">
             <Button className="w-full gradient-bg text-white hover:opacity-90 transition-opacity">Join Plan</Button>
@@ -95,6 +155,18 @@ export const PlanCard = ({ plan }: { plan: Group }) => {
         )}
       </CardFooter>
     </Card>
+    
+    {/* Contribute Modal */}
+    {contributeModalOpen && (
+      <ContributeModal
+        plan={plan}
+        cycleStatus={cycleStatus}
+        open={contributeModalOpen}
+        onClose={() => setContributeModalOpen(false)}
+        onSuccess={handleContributeSuccess}
+      />
+    )}
+  </>
   );
 };
 

@@ -275,6 +275,7 @@ const Dashboard = () => {
 								</h2>
 								{userGroups
 								.filter((group) => group.is_active)
+								.sort((a, b) => (b.created_at || 0) - (a.created_at || 0)) // Sort by creation date, most recent first
 								.map((group) => (
 									<PlanCard key={group.id} plan={group} />
 								))}
@@ -320,7 +321,9 @@ const Dashboard = () => {
                       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
                         <h2 className="text-xl font-heading font-semibold text-vox-secondary">All Your Groups</h2>
                         {Array.isArray(userGroups) && userGroups.length > 0 ? (
-                          userGroups.map((group) => (
+                          userGroups
+                            .sort((a, b) => (b.created_at || 0) - (a.created_at || 0)) // Sort by creation date, most recent first
+                            .map((group) => (
                             <PlanCard key={group.id} plan={group} />
                           ))
                         ) : (

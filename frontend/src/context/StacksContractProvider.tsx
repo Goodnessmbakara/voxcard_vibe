@@ -390,11 +390,16 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
         
         // Fetch participants for this group
         try {
+          console.log('=== FETCHING PARTICIPANTS FOR GROUP', groupId, '===');
           const participants = await getGroupParticipants(groupId);
           groupData.participants = participants;
           console.log('Fetched participants for group', groupId, ':', participants);
+          console.log('Participants count:', participants.length);
+          console.log('Participants type:', typeof participants);
+          console.log('Is array:', Array.isArray(participants));
         } catch (error) {
           console.error('Error fetching participants for group', groupId, ':', error);
+          console.error('Error details:', error);
           // Keep empty array if participants fetch fails
         }
         
@@ -632,6 +637,12 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
     }
 
     try {
+      console.log('=== CALLING get-group-participants ===');
+      console.log('Contract address:', contractAddress);
+      console.log('Contract name:', contractName);
+      console.log('Group ID:', groupId);
+      console.log('Sender address:', address);
+      
       const result = await callReadOnlyFunction({
         contractAddress,
         contractName,
@@ -642,11 +653,14 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
       });
 
       const response = cvToJSON(result);
+      console.log('getGroupParticipants raw result:', result);
       console.log('getGroupParticipants response for group', groupId, ':', response);
       
       if ((response.okay || response.success) && response.value) {
         // Handle tuple structure for participants
         let actualParticipantsData = response.value;
+        console.log('Initial participants data:', actualParticipantsData);
+        
         if (response.value && response.value.type && response.value.type.includes('tuple') && response.value.value) {
           actualParticipantsData = response.value.value;
           console.log('Using participants tuple value data:', actualParticipantsData);
@@ -655,16 +669,21 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
         // Extract participants list
         const participants = actualParticipantsData || [];
         console.log('Extracted participants:', participants);
+        console.log('Participants type:', typeof participants);
+        console.log('Is array:', Array.isArray(participants));
         
         // Ensure it's an array and convert to strings
         const participantsArray = Array.isArray(participants) ? participants.map(p => String(p)) : [];
+        console.log('Final participants array:', participantsArray);
+        console.log('Final participants count:', participantsArray.length);
         return participantsArray;
       } else {
-        console.log('No participants found for group', groupId);
+        console.log('No participants found for group', groupId, '- response:', response);
         return [];
       }
     } catch (error) {
       console.error("Error fetching group participants:", error);
+      console.error("Error stack:", error.stack);
       return [];
     }
   };

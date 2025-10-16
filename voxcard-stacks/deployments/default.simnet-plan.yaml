@@ -63,16 +63,6 @@ plan:
     - id: 0
       transactions:
         - emulated-contract-publish:
-            contract-name: voxcard-savings-v5
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/voxcard-savings-v5.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: voxcard-savings-v6
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/voxcard-savings-v6.clar
-            clarity-version: 3
-        - emulated-contract-publish:
             contract-name: voxcard-savings-v8
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/voxcard-savings-v8.clar

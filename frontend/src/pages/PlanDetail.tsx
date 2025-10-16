@@ -19,6 +19,7 @@ import ContributeModal from "@/components/modals/ContributeModal";
 import { useStacksWallet } from "@/context/StacksWalletProvider";
 import { shortenAddress, formatMicroSTXToSTX } from "@/services/utils";
 import type { ParticipantCycleStatus } from "@/context/StacksContractProvider";
+import ParticipantDebug from "@/components/debug/ParticipantDebug";
 
 
 const PlanDetail = () => {
@@ -238,17 +239,6 @@ const PlanDetail = () => {
               </Button>
             )}
 			
-			{plan?.creator?.toLowerCase() === address && (
-				<Button
-					className="mt-4 md:mt-0 gradient-bg text-white"
-					onClick={() => {
-					// Call your activate/deactivate function here
-					console.log("Toggle group active state");
-					}}
-				>
-					{plan?.is_active ? "Deactivate" : "Activate"}
-				</Button>
-			)}
 
 			<div className="flex gap-2">
 				{isParticipantOrAdmin && (
@@ -342,6 +332,34 @@ const PlanDetail = () => {
 
 			)}
 
+			{/* Group Management - Only visible to creator */}
+			{plan?.creator?.toLowerCase() === address && (
+				<Card className="border-orange-200 bg-orange-50/30">
+					<CardHeader className="pb-3">
+						<CardTitle className="text-orange-800 text-sm">Group Management</CardTitle>
+					</CardHeader>
+					<CardContent className="pt-0">
+						<Button
+							variant="outline"
+							size="sm"
+							className="w-full border-orange-300 text-orange-700 hover:bg-orange-100 hover:border-orange-400"
+							onClick={() => {
+								// Call your activate/deactivate function here
+								console.log("Toggle group active state");
+							}}
+						>
+							{plan?.is_active ? "⏸️ Deactivate Group" : "▶️ Activate Group"}
+						</Button>
+						<p className="text-xs text-orange-600 mt-2">
+							{plan?.is_active 
+								? "Deactivating will pause new contributions" 
+								: "Activating will allow new contributions"
+							}
+						</p>
+					</CardContent>
+				</Card>
+			)}
+
           </div>
 
 		  
@@ -371,14 +389,54 @@ const PlanDetail = () => {
               {/* Members */}
               <TabsContent value="members">
                 <Card>
-                  <CardHeader><CardTitle>Participants</CardTitle></CardHeader>
-                  <CardContent className="space-y-3">
-                    {participants.map((participant, idx) => (
-                      <div key={idx} className="flex justify-between p-3 border rounded">
-                        <span className="font-mono">{participant}</span>
-                        <TrustScoreBadge score={trustScores[participant] ?? 50} />
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>Participants</CardTitle>
+                        <CardDescription>
+                          {participants.length} of {plan.total_participants} members
+                        </CardDescription>
                       </div>
-                    ))}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setRefreshNonce(prev => prev + 1)}
+                      >
+                        Refresh Data
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {/* Debug Info */}
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                      <h4 className="font-medium text-blue-900 mb-2">Debug Info</h4>
+                      <div className="text-sm text-blue-800 space-y-1">
+                        <p><strong>Group ID:</strong> {plan.id}</p>
+                        <p><strong>Creator:</strong> {plan.creator}</p>
+                        <p><strong>Your Address:</strong> {address}</p>
+                        <p><strong>Is Creator:</strong> {plan.creator?.toLowerCase() === address ? 'Yes' : 'No'}</p>
+                        <p><strong>Participants Array:</strong> {JSON.stringify(participants)}</p>
+                        <p><strong>Participants Length:</strong> {participants.length}</p>
+                        <p><strong>Is Participant:</strong> {participants.map((addr) => addr.toLowerCase()).includes(address) ? 'Yes' : 'No'}</p>
+                      </div>
+                    </div>
+                    
+                    {participants.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>No participants found. This might be a data fetching issue.</p>
+                        <p className="text-sm mt-2">If you created this group, you should be listed as a participant.</p>
+                      </div>
+                    ) : (
+                      participants.map((participant, idx) => (
+                        <div key={idx} className="flex justify-between p-3 border rounded">
+                          <span className="font-mono">{participant}</span>
+                          <TrustScoreBadge score={trustScores[participant] ?? 50} />
+                        </div>
+                      ))
+                    )}
+                    
+                    {/* Debug Component */}
+                    <ParticipantDebug groupId={Number(planId)} />
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -459,6 +517,24 @@ const PlanDetail = () => {
 		)}
 
       <ContributeModal plan={plan} cycleStatus={cycleStatus} open={contributeModalOpen} onClose={() => setContributeModalOpen(false)} onSuccess={() => refetchAll()}/>
+      
+      {/* Floating Deactivate Button - Only visible to creator */}
+      {plan?.creator?.toLowerCase() === address && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-white/90 backdrop-blur-sm border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 shadow-lg transition-all duration-200"
+            onClick={() => {
+              // Call your activate/deactivate function here
+              console.log("Toggle group active state");
+            }}
+            title={`${plan?.is_active ? "Deactivate" : "Activate"} this group`}
+          >
+            {plan?.is_active ? "Deactivate Group" : "Activate Group"}
+          </Button>
+        </div>
+      )}
     </>
   );
 };

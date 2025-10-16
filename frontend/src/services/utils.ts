@@ -17,9 +17,23 @@ export const MIN_CONTRIBUTION_MICROSTX = 100; // Minimum 100 microSTX = 0.0001 S
 export const MIN_CONTRIBUTION_STX = 0.0001; // Minimum in STX
 
 export const formatMicroSTXToSTX = (microSTX: number): string => {
+  if (isNaN(microSTX) || microSTX < 0) return "0.000000";
   return (microSTX / 1000000).toFixed(6);
 };
 
 export const formatSTXToMicroSTX = (stx: number): number => {
+  if (isNaN(stx) || stx < 0) return 0;
   return Math.floor(stx * 1000000);
+};
+
+// Helper function to validate STX amount
+export const isValidSTXAmount = (amount: string): boolean => {
+  const num = parseFloat(amount);
+  return !isNaN(num) && num >= 0 && num <= 1000000; // Max 1M STX
+};
+
+// Helper function to format STX amount for display
+export const formatSTXDisplay = (stx: number): string => {
+  if (isNaN(stx) || stx < 0) return "0.000000";
+  return stx.toFixed(6);
 };

@@ -1,0 +1,187 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                   VOXCARD HACKATHON SUBMISSION CHECKLIST                    ║
+║                      Deadline: October 17, 2025 01:00                       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 1: CREATE DEMO VIDEO (2 hours)
+═══════════════════════════════════════════════════════════════════════════════
+
+□ Open Loom.com or OBS Studio
+□ Test audio and screen recording
+□ Practice demo once (don't record yet)
+□ Record full demo following script:
+  □ Hook (30 sec): Problem + VoxCard intro
+  □ Problem (45 sec): Traditional savings group issues
+  □ Demo (2-3 min): Live walkthrough
+    □ Connect wallet
+    □ Browse plans
+    □ Create new plan
+    □ Show trust score
+    □ Make contribution
+    □ Show on explorer
+  □ Technical (30 sec): Tests, Clarity, Bitcoin
+  □ Impact (30 sec): 2.5B people, Bitcoin adoption
+  □ Close (30 sec): Links + thank you
+□ Review recording (is audio clear? demo visible? 3-5 min?)
+□ Upload to YouTube or Loom
+□ Set to Public or Unlisted (NOT Private)
+□ Copy video URL: _________________________________________________
+□ Test video link in incognito browser
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 2: DEPLOY FRONTEND (15 minutes)
+═══════════════════════════════════════════════════════════════════════════════
+
+□ Open terminal
+□ Run: cd /Users/abba/Desktop/voxcard_stacks/frontend
+□ Run: npm install -g vercel
+□ Run: vercel deploy --prod
+□ Copy demo URL: _____________________________________________________
+□ Test deployed demo:
+  □ URL loads
+  □ Homepage visible
+  □ Wallet connects
+  □ Can browse plans
+  □ Can create plan
+  □ Transactions work
+  □ No console errors
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 3: TAKE SCREENSHOTS (15 minutes)
+═══════════════════════════════════════════════════════════════════════════════
+
+□ Create folder: mkdir /Users/abba/Desktop/voxcard_stacks/screenshots
+□ Take these screenshots (Cmd+Shift+4 on Mac):
+  □ homepage.png - Homepage hero
+  □ dashboard.png - User dashboard
+  □ create-plan.png - Create plan form
+  □ plan-details.png - Plan detail page
+  □ wallet-connect.png - Wallet connection
+□ Screenshots saved? Count: ___ / 5
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 4: UPDATE README (30 minutes)
+═══════════════════════════════════════════════════════════════════════════════
+
+□ Open: /Users/abba/Desktop/voxcard_stacks/voxcard-stacks/README.md
+□ Add demo video link
+□ Add live demo URL
+□ Add badges (see README_ENHANCEMENT.md)
+□ Add screenshot section
+□ Commit and push to GitHub
+□ Verify GitHub repo is public
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 5: SUBMIT TO DORAHACKS (30 minutes)
+═══════════════════════════════════════════════════════════════════════════════
+
+□ Go to: https://dorahacks.io/hackathon/stacks-vibe-coding/buidl
+□ Click "Submit Project" or "Add BUIDL"
+□ Fill out form:
+
+  Project Name:
+  □ VoxCard - Community Savings on Bitcoin
+
+  Tagline:
+  □ Transparent & Secure Community Savings on Bitcoin via Stacks
+
+  Category:
+  □ DeFi (check this for $5k bounty)
+  □ Growth/Web2 Transition
+
+  Description:
+  □ Paste short description from SUBMISSION_QUICK_REFERENCE.md
+
+  Technologies:
+  □ Stacks, Clarity, Bitcoin, React, TypeScript, Stacks.js
+
+  GitHub Link:
+  □ _________________________________________________________________
+
+  Demo Video:
+  □ _________________________________________________________________
+
+  Live Demo:
+  □ _________________________________________________________________
+
+  Contract Address:
+  □ ST240V2R09J62PD2KDMJ5Z5X85VAB4VNJ9NZ6XBS1.voxcard-savings-v8
+
+  Screenshots:
+  □ Upload all 5 screenshots
+
+  Team Info:
+  □ Your name: ________________________________________________________
+  □ Your role: ________________________________________________________
+  □ Contact email: ____________________________________________________
+
+□ Review everything twice
+□ Click Submit
+□ Get confirmation email
+□ Copy submission URL: ________________________________________________
+
+═══════════════════════════════════════════════════════════════════════════════
+FINAL VERIFICATION
+═══════════════════════════════════════════════════════════════════════════════
+
+Test in incognito browser:
+
+□ Video link works
+□ Demo URL works
+□ GitHub repo is public
+□ All links in README work
+□ Contract address correct
+□ Screenshots uploaded
+□ DoraHacks submission confirmed
+
+═══════════════════════════════════════════════════════════════════════════════
+CELEBRATION 🎉
+═══════════════════════════════════════════════════════════════════════════════
+
+□ Take a deep breath
+□ You did it!
+□ Submission complete: YES / NO
+□ Submission URL: _____________________________________________________
+□ Date/Time submitted: _________________________________________________
+
+═══════════════════════════════════════════════════════════════════════════════
+NOTES / ISSUES
+═══════════════════════════════════════════════════════════════════════════════
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+═══════════════════════════════════════════════════════════════════════════════
+EMERGENCY CONTACTS
+═══════════════════════════════════════════════════════════════════════════════
+
+Hackathon Telegram: https://t.me/+D8TLYngdvAxmMWFh
+DoraHacks Support: Check hackathon page
+Vercel Docs: https://vercel.com/docs
+Stacks Discord: https://discord.gg/stacks
+
+═══════════════════════════════════════════════════════════════════════════════
+
+TOTAL TIME ESTIMATE: 3-4 hours
+RECOMMENDED START TIME: October 16, 2025 at 6:00 PM
+COMFORTABLE BUFFER: Submit by October 16, 2025 at 10:00 PM
+
+YOU'VE GOT THIS! 🚀
+
+═══════════════════════════════════════════════════════════════════════════════
+
+

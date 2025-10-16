@@ -14,12 +14,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Group } from "@/context/StacksContractProvider";
-import { Coins } from "lucide-react";
+import { Coins, AlertCircle } from "lucide-react";
 import { useStacksWallet } from "@/context/StacksWalletProvider";
 import { useContract } from "@/context/StacksContractProvider";
 import type { ParticipantCycleStatus } from "@/context/StacksContractProvider";
 import ContributionSuccessModal from "./ContributionSuccessModal";
-import { MIN_CONTRIBUTION_MICROSTX, formatMicroSTXToSTX } from "@/services/utils";
+import { MIN_CONTRIBUTION_MICROSTX, formatMicroSTXToSTX, formatSTXToMicroSTX, isValidSTXAmount } from "@/services/utils";
 
 interface ContributeModalProps {
   plan: Group;
@@ -34,7 +34,7 @@ const ContributeModal = ({ plan, cycleStatus, open, onClose, onSuccess }: Contri
   const { address } = useStacksWallet();
   const { contribute } = useContract();
 
-  const [amountMicroSTX, setAmountMicroSTX] = useState('');
+  const [amountSTX, setAmountSTX] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [successData, setSuccessData] = useState<{
@@ -42,10 +42,20 @@ const ContributeModal = ({ plan, cycleStatus, open, onClose, onSuccess }: Contri
     amount: string;
   } | null>(null);
 
+  // Convert STX to microSTX for contract calls
+  const getAmountMicroSTX = () => {
+    if (!amountSTX) return '';
+    const stxAmount = parseFloat(amountSTX);
+    return isNaN(stxAmount) ? '' : String(formatSTXToMicroSTX(stxAmount));
+  };
+
   useEffect(() => {
     if (open) {
       // Set to remaining amount if available, otherwise leave empty for user to input
-      setAmountMicroSTX(cycleStatus?.remaining_this_cycle ? String(cycleStatus.remaining_this_cycle) : '');
+      const remainingSTX = cycleStatus?.remaining_this_cycle 
+        ? formatMicroSTXToSTX(Number(cycleStatus.remaining_this_cycle))
+        : '';
+      setAmountSTX(remainingSTX);
     }
   }, [open, cycleStatus?.remaining_this_cycle]);
 
@@ -59,50 +69,64 @@ const ContributeModal = ({ plan, cycleStatus, open, onClose, onSuccess }: Contri
       return;
     }
 
-    if (!/^\d+$/.test(amountMicroSTX)) {
+    if (!amountSTX || !isValidSTXAmount(amountSTX)) {
       toast({
         title: "Invalid amount",
-        description: "Amount must be a whole number of microSTX (no decimals).",
+        description: "Please enter a valid STX amount (0 to 1,000,000 STX).",
         variant: "destructive",
       });
       return;
     }
 
-    const numericAmount = parseInt(amountMicroSTX, 10);
+    const stxAmount = parseFloat(amountSTX);
+    const amountMicroSTX = formatSTXToMicroSTX(stxAmount);
+
+    // Debug logging
+    console.log('=== CONTRIBUTION VALIDATION DEBUG ===');
+    console.log('Input amountSTX:', amountSTX);
+    console.log('Parsed stxAmount:', stxAmount);
+    console.log('Converted amountMicroSTX:', amountMicroSTX);
+    console.log('MIN_CONTRIBUTION_MICROSTX:', MIN_CONTRIBUTION_MICROSTX);
+    console.log('Is amountMicroSTX < MIN_CONTRIBUTION_MICROSTX?', amountMicroSTX < MIN_CONTRIBUTION_MICROSTX);
 
     // Check minimum contribution amount (enforced by smart contract)
-    if (numericAmount < MIN_CONTRIBUTION_MICROSTX) {
+    if (amountMicroSTX < MIN_CONTRIBUTION_MICROSTX) {
+      console.log('VALIDATION FAILED: Amount too small');
       toast({
         title: "Amount too small",
-        description: `Minimum contribution per transaction is ${MIN_CONTRIBUTION_MICROSTX} microSTX (0.0001 STX).`,
+        description: `Minimum contribution per transaction is ${formatMicroSTXToSTX(MIN_CONTRIBUTION_MICROSTX)} STX.`,
         variant: "destructive",
       });
       return;
     }
 
     // For non-partial payments, must be exact amount
-    if (!plan.allow_partial && amountMicroSTX !== String(plan.contribution_amount)) {
+    const requiredAmountSTX = formatMicroSTXToSTX(Number(plan.contribution_amount));
+    if (!plan.allow_partial && Math.abs(stxAmount - parseFloat(requiredAmountSTX)) > 0.000001) {
       toast({
         title: "Full amount required",
-        description: `This group requires exactly ${plan.contribution_amount} microSTX.`,
+        description: `This group requires exactly ${requiredAmountSTX} STX.`,
         variant: "destructive",
       });
       return;
     }
 
     // For partial payments, warn if contributing more than remaining amount (only if remaining > 0)
-    if (plan.allow_partial && cycleStatus?.remaining_this_cycle && Number(cycleStatus.remaining_this_cycle) > 0 && numericAmount > Number(cycleStatus.remaining_this_cycle)) {
-      toast({
-        title: "Overpayment warning",
-        description: `You're contributing ${numericAmount} microSTX, but only ${cycleStatus.remaining_this_cycle} microSTX is needed to complete this cycle.`,
-        variant: "destructive",
-      });
-      return;
+    if (plan.allow_partial && cycleStatus?.remaining_this_cycle && Number(cycleStatus.remaining_this_cycle) > 0) {
+      const remainingSTX = parseFloat(formatMicroSTXToSTX(Number(cycleStatus.remaining_this_cycle)));
+      if (stxAmount > remainingSTX) {
+        toast({
+          title: "Overpayment warning",
+          description: `You're contributing ${stxAmount} STX, but only ${remainingSTX} STX is needed to complete this cycle.`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setIsSubmitting(true);
     try {
-      const res = await contribute(Number(plan.id), amountMicroSTX);
+      const res = await contribute(Number(plan.id), String(amountMicroSTX));
       console.log("Contribute result:", res);
       
       const txId = res?.txId || res?.txHash || res?.tx?.txId || 'pending';
@@ -110,7 +134,7 @@ const ContributeModal = ({ plan, cycleStatus, open, onClose, onSuccess }: Contri
       // Set success data and show success modal
       setSuccessData({
         txId: txId,
-        amount: amountMicroSTX
+        amount: amountSTX
       });
       setSuccessModalOpen(true);
       
@@ -128,25 +152,26 @@ const ContributeModal = ({ plan, cycleStatus, open, onClose, onSuccess }: Contri
     }
   };
 
-	const handleChange = (e) => {
-		const value = e.target.value;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
 
-		// Allow only digits or empty string
-		if (/^\d*$/.test(value)) {
-			const numericValue = parseInt(value, 10);
-			
-			// For partial payments, allow any numeric input - validation happens on submit
-			if (plan.allow_partial) {
-				setAmountMicroSTX(value);
-			} else {
-				// For non-partial payments, only allow exact contribution amount
-				if (value === '' || numericValue === Number(plan.contribution_amount)) {
-					setAmountMicroSTX(value);
-				}
-				// Don't update if not exact amount for non-partial groups
-			}
-		}
-	};
+    // Allow decimal numbers for STX amounts (up to 6 decimal places)
+    if (/^\d*\.?\d{0,6}$/.test(value) || value === '') {
+      const numericValue = parseFloat(value);
+      
+      // For partial payments, allow any numeric input - validation happens on submit
+      if (plan.allow_partial) {
+        setAmountSTX(value);
+      } else {
+        // For non-partial payments, only allow exact contribution amount
+        const requiredAmountSTX = formatMicroSTXToSTX(Number(plan.contribution_amount));
+        if (value === '' || Math.abs(numericValue - parseFloat(requiredAmountSTX)) < 0.000001) {
+          setAmountSTX(value);
+        }
+        // Don't update if not exact amount for non-partial groups
+      }
+    }
+  };
 
 
   return (
@@ -162,29 +187,36 @@ const ContributeModal = ({ plan, cycleStatus, open, onClose, onSuccess }: Contri
 
           <div className="py-4 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="amount">Amount (microSTX)</Label>
+              <Label htmlFor="amount">Amount (STX)</Label>
               {plan.allow_partial ? (
                 <>
                   <Input
                     id="amount"
-                    type="text"
-                    inputMode="numeric"
-                    value={amountMicroSTX}
-                    onChange={(e) => handleChange(e)}
-                    placeholder={`e.g. ${MIN_CONTRIBUTION_MICROSTX}, ${cycleStatus?.remaining_this_cycle || plan.contribution_amount}`}
+                    type="number"
+                    step="0.000001"
+                    min="0"
+                    value={amountSTX}
+                    onChange={handleChange}
+                    placeholder={`e.g. ${formatMicroSTXToSTX(MIN_CONTRIBUTION_MICROSTX)}, ${formatMicroSTXToSTX(Number(cycleStatus?.remaining_this_cycle || plan.contribution_amount))}`}
                   />
-                  <p className="text-sm text-gray-500">
-                    Partial payments allowed. You can contribute in smaller amounts until you reach the full amount.
-                    <br />
-                    <span className="text-orange-600 font-medium">Minimum per transaction: {MIN_CONTRIBUTION_MICROSTX} microSTX (0.0001 STX)</span>
-                  </p>
+                  <div className="flex items-start space-x-2 text-sm text-gray-600">
+                    <AlertCircle className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p>Partial payments allowed. You can contribute in smaller amounts until you reach the full amount.</p>
+                      <p className="text-orange-600 font-medium mt-1">
+                        Minimum per transaction: {formatMicroSTXToSTX(MIN_CONTRIBUTION_MICROSTX)} STX
+                      </p>
+                    </div>
+                  </div>
                 </>
               ) : (
                 <>
-                  <p className="font-bold ">{formatMicroSTXToSTX(Number(plan.contribution_amount))} STX</p>
-                  <p className="text-sm text-gray-500">
-                    Full payment required: {formatMicroSTXToSTX(Number(plan.contribution_amount))} STX
-                  </p>
+                  <div className="p-3 bg-gray-50 rounded-md border">
+                    <p className="font-bold text-lg">{formatMicroSTXToSTX(Number(plan.contribution_amount))} STX</p>
+                    <p className="text-sm text-gray-500">
+                      Full payment required: {formatMicroSTXToSTX(Number(plan.contribution_amount))} STX
+                    </p>
+                  </div>
                 </>
               )}
             </div>
@@ -201,14 +233,16 @@ const ContributeModal = ({ plan, cycleStatus, open, onClose, onSuccess }: Contri
                   <div className="mt-2 text-sm text-green-700 space-y-1">
                     <p>• Expected: {formatMicroSTXToSTX(Number(plan.contribution_amount))} STX</p>
                     <p>• Frequency: {plan.frequency.toLowerCase()}</p>
-                    {plan.allow_partial && <>
-                      <p>Partial payments allowed</p>
-                      <p>Contributed: {formatMicroSTXToSTX(Number(cycleStatus?.contributed_this_cycle || 0))} STX</p>
-                      <p>Left: {formatMicroSTXToSTX(Number(cycleStatus?.remaining_this_cycle || plan.contribution_amount))} STX</p>
-                      {Number(cycleStatus?.debt || 0) > 0 && (
-                        <p className="text-orange-600 font-medium">Debt: {formatMicroSTXToSTX(Number(cycleStatus?.debt || 0))} STX</p>
-                      )}
-                    </>}
+                    {plan.allow_partial && (
+                      <>
+                        <p>• Partial payments allowed</p>
+                        <p>• Contributed: {formatMicroSTXToSTX(Number(cycleStatus?.contributed_this_cycle || 0))} STX</p>
+                        <p>• Remaining: {formatMicroSTXToSTX(Number(cycleStatus?.remaining_this_cycle || plan.contribution_amount))} STX</p>
+                        {Number(cycleStatus?.debt || 0) > 0 && (
+                          <p className="text-orange-600 font-medium">• Debt: {formatMicroSTXToSTX(Number(cycleStatus?.debt || 0))} STX</p>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
