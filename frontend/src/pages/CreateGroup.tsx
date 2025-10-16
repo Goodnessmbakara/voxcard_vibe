@@ -38,6 +38,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useContract } from "../context/StacksContractProvider";
 import { CreateGroupInput } from "@/context/StacksContractProvider";
+import GroupCreationSuccessModal from "@/components/modals/GroupCreationSuccessModal";
 
 
 // Form schema with validation
@@ -53,10 +54,15 @@ const formSchema = z.object({
   asset_type: z.string().min(1).max(10),
 });
 
-const CreatePlan = () => {
+const CreateGroup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [successData, setSuccessData] = useState<{
+    txId: string;
+    groupName: string;
+  } | null>(null);
   const { createGroup, address } = useContract();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -78,14 +84,19 @@ const CreatePlan = () => {
     setIsSubmitting(true);
 	console.log(values)
     try {
-      await createGroup(values as CreateGroupInput);
-
-      toast({
-        title: "Group created on chain!",
-        description: "Transaction submitted successfully.",
+      const res = await createGroup(values as CreateGroupInput);
+      console.log("Create group result:", res);
+      
+      const txId = res?.txId || res?.txHash || res?.tx?.txId || 'pending';
+      console.log("Extracted transaction ID:", txId);
+      
+      // Set success data and show success modal
+      setSuccessData({
+        txId: txId,
+        groupName: values.name
       });
-
-      navigate("/dashboard");
+      console.log("Setting success modal open");
+      setSuccessModalOpen(true);
     } catch (err) {
       console.error(err);
       toast({
@@ -366,8 +377,22 @@ const CreatePlan = () => {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Success Modal */}
+      {successData && (
+        <GroupCreationSuccessModal
+          open={successModalOpen}
+          onClose={() => {
+            setSuccessModalOpen(false);
+            setSuccessData(null);
+            navigate("/dashboard");
+          }}
+          txId={successData.txId}
+          groupName={successData.groupName}
+        />
+      )}
     </>
   );
 };
 
-export default CreatePlan;
+export default CreateGroup;

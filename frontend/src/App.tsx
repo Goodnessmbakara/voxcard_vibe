@@ -6,9 +6,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
-import Plans from "./pages/Plans";
-import PlanDetail from "./pages/PlanDetail";
-import CreatePlan from "./pages/CreatePlan";
+import Groups from "./pages/Groups";
+import GroupDetail from "./pages/GroupDetail";
+import CreateGroup from "./pages/CreateGroup";
 import Community from "./pages/Community";
 import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
@@ -37,12 +37,12 @@ const App = () => {
                     <Routes>
                       <Route path="/" element={<Home />} />
                       <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/groups/create" element={<CreatePlan />} />
+                      <Route path="/groups/create" element={<CreateGroup />} />
                       <Route path="/community" element={<Community />} />
                       <Route path="/privacy" element={<Privacy />} />
                       <Route path="/about" element={<About />} />
-                      <Route path="/groups" element={<Plans />} />
-                      <Route path="/groups/:planId" element={<PlanDetail />} />
+                      <Route path="/groups" element={<Groups />} />
+                      <Route path="/groups/:planId" element={<GroupDetail />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </AnimatePresence>

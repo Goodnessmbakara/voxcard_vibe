@@ -10,7 +10,7 @@ import React, { useState } from 'react';
 import ContributeModal from '@/components/modals/ContributeModal';
 import { useContract } from '@/context/StacksContractProvider';
 
-export const PlanCard = ({ plan, onRefresh }: { plan: Group; onRefresh?: () => void }) => {
+export const GroupCard = ({ plan, onRefresh }: { plan: Group; onRefresh?: () => void }) => {
   const { address: walletAddress } = useStacksWallet();
   const { getParticipantCycleStatus } = useContract();
   const participants = Array.isArray(plan.participants) ? plan.participants : [];
@@ -179,4 +179,4 @@ export const PlanCard = ({ plan, onRefresh }: { plan: Group; onRefresh?: () => v
   );
 };
 
-export default PlanCard;
+export default GroupCard;

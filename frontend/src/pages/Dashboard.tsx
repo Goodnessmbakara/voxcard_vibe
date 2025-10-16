@@ -3,7 +3,7 @@ import { mockPayouts, defaultUser } from '@/lib/mock-data';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useStacksWallet } from '@/context/StacksWalletProvider';
-import PlanCard from '@/components/shared/PlanCard';
+import GroupCard from '@/components/shared/GroupCard';
 import TrustScoreBadge from '@/components/shared/TrustScoreBadge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Link } from 'react-router-dom';
@@ -277,7 +277,7 @@ const Dashboard = () => {
 								.filter((group) => group.is_active)
 								.sort((a, b) => (b.created_at || 0) - (a.created_at || 0)) // Sort by creation date, most recent first
 								.map((group) => (
-									<PlanCard key={group.id} plan={group} />
+									<GroupCard key={group.id} plan={group} />
 								))}
 							</div>
 							) : (

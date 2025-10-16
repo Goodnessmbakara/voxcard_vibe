@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '@/components/layout/Footer';
-import PlanCard from '@/components/shared/PlanCard';
+import GroupCard from '@/components/shared/GroupCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,7 +17,7 @@ import { useContract } from '@/context/StacksContractProvider';
 import { useStacksWallet } from '@/context/StacksWalletProvider';
 import { Group } from '@/context/StacksContractProvider';
 
-const Plans = () => {
+const Groups = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [plans, setPlans] = useState<Group[]>([]);
@@ -79,7 +79,16 @@ const Plans = () => {
         console.log('=== FINAL RESULT ===');
         console.log('Total groups found:', allGroups.length);
         console.log('Groups data:', allGroups);
-        setPlans(allGroups);
+        
+        // Sort groups by created_at timestamp in descending order (newest first)
+        const sortedGroups = allGroups.sort((a, b) => {
+          const timestampA = a.created_at || 0;
+          const timestampB = b.created_at || 0;
+          return timestampB - timestampA; // Descending order (newest first)
+        });
+        
+        console.log('Sorted groups (newest first):', sortedGroups);
+        setPlans(sortedGroups);
         setError(null);
       } catch (err) {
         console.error('Error fetching groups:', err);
@@ -212,7 +221,7 @@ const Plans = () => {
           ) : filteredPlans.length > 0 ? (
             <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPlans.map((plan) => (
-                <PlanCard key={plan.id} plan={plan} onRefresh={refreshPlans} />
+                <GroupCard key={plan.id} plan={plan} onRefresh={refreshPlans} />
               ))}
             </motion.div>
           ) : (
@@ -344,4 +353,4 @@ const Plans = () => {
   );
 };
 
-export default Plans;
+export default Groups;

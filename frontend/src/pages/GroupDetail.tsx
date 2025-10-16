@@ -22,7 +22,7 @@ import type { ParticipantCycleStatus } from "@/context/StacksContractProvider";
 import ParticipantDebug from "@/components/debug/ParticipantDebug";
 
 
-const PlanDetail = () => {
+const GroupDetail = () => {
   const [joining, setJoining] = useState(false);
   const [joined, setJoined] = useState(false);
   const [joinRequests, setJoinRequests] = useState([]);
@@ -574,4 +574,4 @@ const PlanDetail = () => {
   );
 };
 
-export default PlanDetail;
+export default GroupDetail;
