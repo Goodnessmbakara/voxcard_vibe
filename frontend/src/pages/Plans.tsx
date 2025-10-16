@@ -25,6 +25,7 @@ const Plans = () => {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const pageSize = 10; // adjust as needed
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const { getGroupCount, getPaginatedGroups, getGroupsByCreator } = useContract();
   const { isConnected, address } = useStacksWallet();
@@ -89,7 +90,11 @@ const Plans = () => {
     };
 
     fetchPlans();
-  }, [page, isConnected, address]); // re-run if page, connection, or address changes
+  }, [page, isConnected, address, refreshKey]); // re-run if page, connection, address, or refreshKey changes
+
+  const refreshPlans = () => {
+    setRefreshKey(prev => prev + 1);
+  };
 
   const filteredPlans = plans.filter((plan) => {
     const matchesSearch =
@@ -207,7 +212,7 @@ const Plans = () => {
           ) : filteredPlans.length > 0 ? (
             <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPlans.map((plan) => (
-                <PlanCard key={plan.id} plan={plan} />
+                <PlanCard key={plan.id} plan={plan} onRefresh={refreshPlans} />
               ))}
             </motion.div>
           ) : (

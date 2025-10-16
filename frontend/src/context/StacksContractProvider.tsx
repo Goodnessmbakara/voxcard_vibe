@@ -118,6 +118,7 @@ interface ContractContextProps {
   getGroupParticipants: (groupId: number) => Promise<string[]>;
   contribute: (groupId: number, amountMicroSTX: string) => Promise<any>;
   getParticipantCycleStatus: (groupId: number, participant: string) => Promise<ParticipantCycleStatus>;
+  getTotalParticipantContributions: (groupId: number, participant: string) => Promise<number>;
   getTrustScore: (sender: string) => Promise<number>;
   getTotalContributed: (user: string) => Promise<number>;
   getContributionHistory: (user: string) => Promise<ContributionHistory[]>;
@@ -637,11 +638,6 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
     }
 
     try {
-      console.log('=== CALLING get-group-participants ===');
-      console.log('Contract address:', contractAddress);
-      console.log('Contract name:', contractName);
-      console.log('Group ID:', groupId);
-      console.log('Sender address:', address);
       
       const result = await callReadOnlyFunction({
         contractAddress,
@@ -653,32 +649,50 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
       });
 
       const response = cvToJSON(result);
-      console.log('getGroupParticipants raw result:', result);
-      console.log('getGroupParticipants response for group', groupId, ':', response);
       
-      if ((response.okay || response.success) && response.value) {
+      if (!response.okay && !response.success) {
+        return [];
+      }
+      
+      if (response.value) {
         // Handle tuple structure for participants
         let actualParticipantsData = response.value;
-        console.log('Initial participants data:', actualParticipantsData);
         
         if (response.value && response.value.type && response.value.type.includes('tuple') && response.value.value) {
           actualParticipantsData = response.value.value;
-          console.log('Using participants tuple value data:', actualParticipantsData);
         }
         
         // Extract participants list
         const participants = actualParticipantsData || [];
-        console.log('Extracted participants:', participants);
-        console.log('Participants type:', typeof participants);
-        console.log('Is array:', Array.isArray(participants));
         
-        // Ensure it's an array and convert to strings
-        const participantsArray = Array.isArray(participants) ? participants.map(p => String(p)) : [];
-        console.log('Final participants array:', participantsArray);
-        console.log('Final participants count:', participantsArray.length);
+        // Handle different data structures from the contract
+        let participantsArray = [];
+        
+        if (Array.isArray(participants)) {
+          // If it's already an array, map to strings
+          participantsArray = participants.map(p => String(p));
+        } else if (participants && participants.value && Array.isArray(participants.value)) {
+          // If it's wrapped in a value object with array
+          participantsArray = participants.value.map(p => {
+            if (typeof p === 'object' && p.value) {
+              return String(p.value); // Extract from {type: 'principal', value: 'address'}
+            }
+            return String(p);
+          });
+        } else if (participants && participants.type && participants.type.includes('list')) {
+          // If it's a Clarity list type
+          if (participants.value && Array.isArray(participants.value)) {
+            participantsArray = participants.value.map(p => {
+              if (typeof p === 'object' && p.value) {
+                return String(p.value); // Extract from {type: 'principal', value: 'address'}
+              }
+              return String(p);
+            });
+          }
+        }
+        
         return participantsArray;
       } else {
-        console.log('No participants found for group', groupId, '- response:', response);
         return [];
       }
     } catch (error) {
@@ -726,28 +740,49 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
     }
 
     try {
+      // Normalize participant address to uppercase
+      const normalizedParticipant = participant.toUpperCase();
+      
       const result = await callReadOnlyFunction({
         contractAddress,
         contractName,
         functionName: "get-participant-cycle-status",
-        functionArgs: [uintCV(groupId), principalCV(participant)],
+        functionArgs: [uintCV(groupId), principalCV(normalizedParticipant)],
         network,
         senderAddress: address!,
       });
 
-      const status = cvToJSON(result).value;
-      console.log("Raw participant cycle status:", status);
+      const response = cvToJSON(result);
       
-      // Map smart contract response to our interface
-      return {
-        contributed_this_cycle: status["contributed-this-cycle"] || "0",
-        remaining_this_cycle: status["remaining-this-cycle"] || "0",
-        is_recipient_this_cycle: false, // Not provided by smart contract
-        cycle: Number(status["current-cycle"] || 0),
-        required: String(status["required-amount"] || "0"),
-        fully_contributed: status["is-complete"] || false,
-        debt: String(status["total-debt"] || "0"),
+      if (!response.okay && !response.success) {
+        throw new Error("Contract call failed");
+      }
+      
+      const status = response.value;
+      
+      // Handle nested value structure if present
+      const actualStatus = status.value || status;
+      
+      // Helper function to extract value from Clarity type objects
+      const extractValue = (value: any): any => {
+        if (value && typeof value === 'object' && value.value !== undefined) {
+          return value.value;
+        }
+        return value;
       };
+
+      // Map smart contract response to our interface
+      const cycleStatus = {
+        contributed_this_cycle: String(extractValue(actualStatus["contributed-this-cycle"]) || "0"),
+        remaining_this_cycle: String(extractValue(actualStatus["remaining-this-cycle"]) || "0"),
+        is_recipient_this_cycle: false, // Not provided by smart contract
+        cycle: Number(extractValue(actualStatus["current-cycle"]) || 0),
+        required: String(extractValue(actualStatus["required-amount"]) || "0"),
+        fully_contributed: Boolean(extractValue(actualStatus["is-complete"]) || false),
+        debt: String(extractValue(actualStatus["total-debt"]) || "0"),
+      };
+      
+      return cycleStatus;
     } catch (error) {
       console.error("Error fetching participant cycle status:", error);
       return {
@@ -759,6 +794,99 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
         fully_contributed: false,
         debt: "0",
       };
+    }
+  };
+
+  // New function to get total contributions across all cycles
+  const getTotalParticipantContributions = async (groupId: number, participant: string): Promise<number> => {
+    if (!isConnected) {
+      throw new Error("Wallet not connected");
+    }
+
+    try {
+      // First get the group to know the current cycle
+      const groupResult = await getGroupById(groupId);
+      if (!groupResult.group) {
+        return 0;
+      }
+      
+      const currentCycle = groupResult.group.current_cycle;
+      
+      let totalContributions = 0;
+      
+      // Check contributions for each cycle up to current cycle
+      for (let cycle = 1; cycle <= currentCycle; cycle++) {
+        try {
+          // Validate participant address format (handle both uppercase and lowercase)
+          if (!participant || (!participant.startsWith('ST') && !participant.startsWith('st'))) {
+            continue;
+          }
+          
+          // Normalize address to uppercase for Stacks
+          const normalizedParticipant = participant.toUpperCase();
+          
+          const result = await callReadOnlyFunction({
+            contractAddress,
+            contractName,
+            functionName: "get-cycle-contribution",
+            functionArgs: [uintCV(groupId), principalCV(normalizedParticipant), uintCV(cycle)],
+            network,
+            senderAddress: address!,
+          });
+
+          const response = cvToJSON(result);
+          
+          // Check for both okay and success, and ensure we have value data
+          if ((response.okay || response.success) && response.value) {
+            const contribution = response.value;
+            
+            // Recursively search for amount-contributed
+            const findAmountContributed = (obj: any, depth = 0): number => {
+              if (depth > 5) return 0; // Prevent infinite recursion
+              
+              if (obj && typeof obj === 'object') {
+                // Check if this level has amount-contributed
+                if (obj["amount-contributed"]) {
+                  const value = obj["amount-contributed"];
+                  
+                  // Handle Clarity type objects that have nested value
+                  if (typeof value === 'object' && value.value) {
+                    return Number(value.value);
+                  } else if (typeof value === 'string') {
+                    return Number(value);
+                  } else {
+                    return Number(value);
+                  }
+                }
+                
+                // Check if this level has a value property
+                if (obj.value) {
+                  return findAmountContributed(obj.value, depth + 1);
+                }
+                
+                // Check all properties for nested objects
+                for (const key in obj) {
+                  if (obj[key] && typeof obj[key] === 'object') {
+                    const result = findAmountContributed(obj[key], depth + 1);
+                    if (result > 0) return result;
+                  }
+                }
+              }
+              return 0;
+            };
+            
+            const amount = findAmountContributed(contribution);
+            totalContributions += amount;
+          }
+        } catch (error) {
+          // Continue to next cycle
+        }
+      }
+      
+      return totalContributions;
+    } catch (error) {
+      console.error("Error fetching total contributions:", error);
+      return 0;
     }
   };
 
@@ -1234,6 +1362,7 @@ export const StacksContractProvider = ({ children }: { children: ReactNode }) =>
         getGroupParticipants,
         contribute,
         getParticipantCycleStatus,
+        getTotalParticipantContributions,
         getTrustScore,
         getTotalContributed,
         getContributionHistory,

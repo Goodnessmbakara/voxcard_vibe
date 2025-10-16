@@ -10,7 +10,7 @@ import React, { useState } from 'react';
 import ContributeModal from '@/components/modals/ContributeModal';
 import { useContract } from '@/context/StacksContractProvider';
 
-export const PlanCard = ({ plan }: { plan: Group }) => {
+export const PlanCard = ({ plan, onRefresh }: { plan: Group; onRefresh?: () => void }) => {
   const { address: walletAddress } = useStacksWallet();
   const { getParticipantCycleStatus } = useContract();
   const participants = Array.isArray(plan.participants) ? plan.participants : [];
@@ -42,8 +42,23 @@ export const PlanCard = ({ plan }: { plan: Group }) => {
   };
 
   const handleContributeSuccess = () => {
-    // Refresh the page or update data
-    window.location.reload();
+    // Refresh cycle status after successful contribution
+    const refreshCycleStatus = async () => {
+      if (isParticipantOrAdmin && address) {
+        try {
+          const status = await getParticipantCycleStatus(Number(plan.id), address);
+          setCycleStatus(status);
+        } catch (error) {
+          console.error('Error refreshing cycle status:', error);
+        }
+      }
+    };
+    refreshCycleStatus();
+    
+    // Also refresh the parent component's data
+    if (onRefresh) {
+      onRefresh();
+    }
   };
 
   const frequencyToText: { [key: string]: string } = {
@@ -138,12 +153,6 @@ export const PlanCard = ({ plan }: { plan: Group }) => {
               <p className="text-xs text-gray-500 text-center">
                 Expected: {formatMicroSTXToSTX(Number(plan.contribution_amount))} STX
               </p>
-            )}
-            {/* Debug info for remaining amount */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className="text-xs text-gray-400 mt-1">
-                Debug: cycleStatus={JSON.stringify(cycleStatus, null, 2)}
-              </div>
             )}
           </>
         ) : plan.is_active ? (

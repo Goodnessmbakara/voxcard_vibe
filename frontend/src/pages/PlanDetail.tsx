@@ -33,6 +33,8 @@ const PlanDetail = () => {
 	approveJoinRequest,
 	denyJoinRequest,
 	getParticipantCycleStatus,
+	getTotalParticipantContributions,
+	getGroupParticipants,
 	getTrustScore
  } = useContract();
   const { toast } = useToast();
@@ -50,6 +52,7 @@ const PlanDetail = () => {
     plan?.creator?.toLowerCase() === address;
 
 	const [cycleStatus, setCycleStatus] = useState<ParticipantCycleStatus | null>(null);
+	const [totalContributions, setTotalContributions] = useState<number>(0);
 
 	const contributeDisabled =
 		!isParticipantOrAdmin ||
@@ -83,12 +86,11 @@ const PlanDetail = () => {
 		const fetchStatus = async () => {
 			if (!planId || !address || !isParticipantOrAdmin) {
 				setCycleStatus(null);
+				setTotalContributions(0);
 				return;
 			}
 			try {
-			console.log("Fetching cycle status for participant:", address);
 			const res = await getParticipantCycleStatus(Number(planId), address);
-			console.log("Cycle status result:", res);
 			setCycleStatus(res);
 			} catch (e) {
 			console.error("GetParticipantCycleStatus failed:", e);
@@ -97,6 +99,25 @@ const PlanDetail = () => {
 		};
 		fetchStatus();
 	}, [planId, address, isParticipantOrAdmin, refreshNonce]);
+
+	// New useEffect to fetch total contributions across all cycles
+	useEffect(() => {
+		const fetchTotalContributions = async () => {
+			if (!planId || !address || !isParticipantOrAdmin) {
+				setTotalContributions(0);
+				return;
+			}
+			try {
+				const total = await getTotalParticipantContributions(Number(planId), address);
+				setTotalContributions(total);
+			} catch (e) {
+				console.error("GetTotalParticipantContributions failed:", e);
+				setTotalContributions(0);
+			}
+		};
+		fetchTotalContributions();
+	}, [planId, address, isParticipantOrAdmin, refreshNonce]);
+
 
 	const refetchAll = () => setRefreshNonce(n => n + 1);
 	
@@ -240,25 +261,26 @@ const PlanDetail = () => {
             )}
 			
 
-			<div className="flex gap-2">
-				{isParticipantOrAdmin && (
-				<div className="mt-4 md:mt-0 flex items-center gap-2 bg-green-100 text-green-800 px-3 py-2 rounded-md">
-					<Check size={16} />
-					<span>You're a participant</span>
-				</div>
-				)}
+					<div className="flex gap-2">
+						{isParticipantOrAdmin && (
+						<div className="mt-4 md:mt-0 flex items-center gap-2 bg-green-100 text-green-800 px-3 py-2 rounded-md">
+							<Check size={16} />
+							<span>You're a participant</span>
+						</div>
+						)}
 
-				{isParticipantOrAdmin && (
-					<Button
-						className="mt-4 md:mt-0 gradient-bg text-white"
-						onClick={handleContribute}
-						disabled={contributeDisabled}
-						title={cycleStatus?.fully_contributed ? "You already contributed this cycle" : undefined}
-					>
-						{cycleStatus?.fully_contributed ? "Contributed" : "Contribute"}
-					</Button>
-				)}
-			</div>
+						{isParticipantOrAdmin && (
+							<Button
+								className="mt-4 md:mt-0 gradient-bg text-white"
+								onClick={handleContribute}
+								disabled={contributeDisabled}
+								title={cycleStatus?.fully_contributed ? "You already contributed this cycle" : undefined}
+							>
+								{cycleStatus?.fully_contributed ? "Contributed" : "Contribute"}
+							</Button>
+						)}
+
+					</div>
             
           </div>
         </div>
@@ -316,16 +338,29 @@ const PlanDetail = () => {
 						<CardTitle>Your Contribution</CardTitle>
 					</CardHeader>
 					<CardContent className="space-y-4">
+						{/* Total Contributions Across All Cycles */}
+						<div className="bg-green-50 border border-green-200 rounded-lg p-3">
+							<p className="text-green-800 font-semibold">
+								Total STX Contributed: <b>{formatMicroSTXToSTX(totalContributions)} STX</b>
+							</p>
+							<p className="text-green-600 text-sm">
+								Across all cycles to this group
+							</p>
+						</div>
+						
+						{/* Current Cycle Status */}
 						{cycleStatus?.fully_contributed ? (
-							<p>You have completed payment for this cycle.</p>
+							<div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+								<p className="text-blue-800 font-semibold">✅ You have completed payment for this cycle.</p>
+							</div>
 						) : (
-							<>
-								<p>STX contributed to Cycle: <b>{formatMicroSTXToSTX(Number(cycleStatus?.contributed_this_cycle || 0))} STX</b></p>
-								<p>STX unpaid to Cycle: <b>{formatMicroSTXToSTX(Number(cycleStatus?.remaining_this_cycle || 0))} STX</b></p>
+							<div className="space-y-2">
+								<p>STX contributed to Current Cycle: <b>{formatMicroSTXToSTX(Number(cycleStatus?.contributed_this_cycle || 0))} STX</b></p>
+								<p>STX unpaid to Current Cycle: <b>{formatMicroSTXToSTX(Number(cycleStatus?.remaining_this_cycle || 0))} STX</b></p>
 								{Number(cycleStatus?.debt || 0) > 0 && (
 									<p className="text-orange-600">Debt from previous cycles: <b>{formatMicroSTXToSTX(Number(cycleStatus?.debt || 0))} STX</b></p>
 								)}
-							</>
+							</div>
 						)}
 					</CardContent>
 				</Card>
